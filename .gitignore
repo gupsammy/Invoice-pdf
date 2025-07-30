@@ -3,3 +3,4 @@ venv
 input
 json_responses
 *.log
+*.csv

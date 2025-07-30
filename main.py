@@ -4,7 +4,7 @@ import csv
 import time
 import logging
 import shutil
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
@@ -14,9 +14,10 @@ from tqdm import tqdm
 from google import genai
 from google.genai import types
 
-# Constants for retry logic
+# Constants for retry logic and async configuration
 _MAX_EXTRACTION_RETRIES = 3  # Max retries for a single file extraction attempt
 _RETRY_DELAY_BASE_SECONDS = 10  # Base delay for retries, used with exponential backoff
+MAX_CONCURRENT_API_CALLS = 5  # Max concurrent API calls for async parallelization
 
 # Set up logging
 logging.basicConfig(
@@ -34,22 +35,26 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 if not API_KEY:
     raise ValueError("GEMINI_API_KEY not found in environment variables. Please set it in a .env file.")
 
-def extract_invoice_data(pdf_path: str) -> Optional[Dict[str, Any]]:
+async def extract_invoice_data_async(
+    pdf_path: str,
+    client: "genai.Client", 
+    semaphore: asyncio.Semaphore,
+) -> Optional[Dict[str, Any]]:
     """
-    Extract invoice data from a PDF file using Gemini API, with retries.
+    Asynchronously extract invoice data from a PDF file using Gemini API, with retries.
     
     Args:
         pdf_path: Path to the PDF file
+        client: Shared genai client
+        semaphore: Semaphore to control concurrent API calls
         
     Returns:
         Dictionary containing the extracted invoice data or None if extraction fails after retries.
     """
-    try:
-        client = genai.Client(api_key=API_KEY)
-        pdf_path_obj = Path(pdf_path)
-        pdf_bytes = pdf_path_obj.read_bytes()
-        
-        system_instruction = """You are provided with a PDF invoice. Extract the following information and return a well-structured JSON object:
+    pdf_path_obj = Path(pdf_path)
+    pdf_bytes = pdf_path_obj.read_bytes()
+    
+    system_instruction = """You are provided with a PDF invoice. Extract the following information and return a well-structured JSON object:
 
 1. vendor_name: Full legal name of the vendor/supplier
 2. pan: PAN number of the vendor 
@@ -70,20 +75,21 @@ Notes:
 
 Return only the JSON object without additional comments."""
 
-        contents = [
-            types.Part.from_bytes(
-                data=pdf_bytes,
-                mime_type='application/pdf',
-            ),
-            "Extract details from this pdf"
-        ]
-        config = types.GenerateContentConfig(system_instruction=system_instruction)
-        
+    contents = [
+        types.Part.from_bytes(
+            data=pdf_bytes,
+            mime_type='application/pdf',
+        ),
+        "Extract details from this pdf"
+    ]
+    config = types.GenerateContentConfig(system_instruction=system_instruction)
+    
+    async with semaphore:
         for attempt in range(_MAX_EXTRACTION_RETRIES):
             try:
-                logging.info(f"Extraction attempt {attempt + 1}/{_MAX_EXTRACTION_RETRIES} for {pdf_path}...")
-                response = client.aio.models.generate_content(
-                    model="gemini-2.5-flash",
+                logging.info(f"[{pdf_path_obj.name}] Attempt {attempt + 1}/{_MAX_EXTRACTION_RETRIES} – requesting Gemini ...")
+                response = await client.aio.models.generate_content(
+                    model="gemini-2.5-pro",
                     contents=contents,
                     config=config
                 )
@@ -96,92 +102,34 @@ Return only the JSON object without additional comments."""
                 with open(json_log_path, 'w', encoding='utf-8') as f_json_log:
                     f_json_log.write(response.text)
                     
-                response_text = response.text
-                json_start = response_text.find('{')
-                json_end = response_text.rfind('}') + 1
+                resp_txt = response.text
+                json_start = resp_txt.find('{')
+                json_end = resp_txt.rfind('}') + 1
                 
                 if json_start == -1 or json_end == 0:
-                    logging.warning(f"No JSON object found in response for {pdf_path} (attempt {attempt + 1}). Raw response snippet: {response_text[:200]}")
-                    # Check if this non-JSON response is due to a known server error
-                    if any(phrase in response_text for phrase in ["502 Bad Gateway", "Service Unavailable", "server error"]):
-                        if attempt < _MAX_EXTRACTION_RETRIES - 1:
-                            delay = _RETRY_DELAY_BASE_SECONDS * (2**attempt)
-                            logging.info(f"Retrying {pdf_path} in {delay}s due to server error in response content...")
-                            time.sleep(delay)
-                            continue # To the next attempt in the loop
-                        else:
-                            logging.error(f"All {_MAX_EXTRACTION_RETRIES} retries failed for {pdf_path} due to persistent server error in response content.")
-                            return None
-                    else: # Non-JSON response, not identified as a retryable server error
-                        logging.error(f"Unrecognized non-JSON response for {pdf_path}, not retrying this file attempt.")
-                        return None # Stop attempts for this file if response is fundamentally not JSON and not a server error
+                    # Non-JSON or malformed response – decide if transient
+                    if any(err in resp_txt for err in ["502", "Service Unavailable", "server error"]):
+                        raise RuntimeError("Transient upstream error – will retry")
+                    logging.error(f"[{pdf_path_obj.name}] Un-parsable response – giving up without retry: {resp_txt[:120]}")
+                    return None
 
-                json_str = response_text[json_start:json_end]
-                invoice_data = json.loads(json_str)
-                logging.info(f"Successfully extracted data for {pdf_path} on attempt {attempt + 1}.")
-                return invoice_data # Success
+                invoice_data = json.loads(resp_txt[json_start:json_end])
+                logging.info(f"[{pdf_path_obj.name}] Data extraction successful.")
+                return invoice_data
 
             except json.JSONDecodeError as jde:
-                logging.error(f"JSONDecodeError for {pdf_path} (attempt {attempt + 1}): {str(jde)}. Response snippet: {response_text[:200]}")
-                # Generally, JSONDecodeError means content is malformed, not typically a transient server issue.
-                # So, we don't retry for this specific error within this file's attempts.
+                logging.error(f"[{pdf_path_obj.name}] JSON decode failed: {str(jde)} – response excerpt: {resp_txt[:120]}")
+                return None  # Usually unrecoverable
+            except Exception as exc:
+                if attempt < _MAX_EXTRACTION_RETRIES - 1:
+                    delay = _RETRY_DELAY_BASE_SECONDS * (2 ** attempt)
+                    logging.warning(f"[{pdf_path_obj.name}] Error – {str(exc)[:100]}. Retrying in {delay}s ...")
+                    await asyncio.sleep(delay)
+                    continue
+                logging.error(f"[{pdf_path_obj.name}] Exhausted retries after persistent errors: {str(exc)[:150]}")
                 return None
-            except (types.generation_types.BlockedPromptException, types.generation_types.StopCandidateException) as specific_api_error:
-                logging.error(f"API policy/content error for {pdf_path} (attempt {attempt + 1}): {str(specific_api_error)}. Not retrying this file.")
-                return None # Non-retryable API policy error
-            except Exception as e:
-                error_str = str(e)
-                logging.warning(f"Extraction attempt {attempt + 1}/{_MAX_EXTRACTION_RETRIES} for {pdf_path} failed: {error_str[:200]}")
-                
-                is_retryable_error = any(phrase in error_str.lower() for phrase in 
-                                         ["502 bad gateway", "service unavailable", "server error", 
-                                          "internal error", "transient error", "rate limit exceeded", "timeout"])
-                
-                if is_retryable_error:
-                    if attempt < _MAX_EXTRACTION_RETRIES - 1:
-                        delay = _RETRY_DELAY_BASE_SECONDS * (2**attempt) # Exponential backoff
-                        logging.info(f"Retrying {pdf_path} in {delay} seconds due to: {error_str[:100]}")
-                        time.sleep(delay)
-                    else:
-                        logging.error(f"All {_MAX_EXTRACTION_RETRIES} retries failed for {pdf_path}. Last error: {error_str[:200]}")
-                        return None # All retries for this file exhausted
-                else:
-                    logging.error(f"Non-retryable error during extraction for {pdf_path}: {error_str[:200]}. Not retrying this file.")
-                    return None # Non-retryable error, stop attempts for this file.
-        
-        # If loop completes, it means all retries were exhausted for retryable errors
-        logging.error(f"Failed to extract data from {pdf_path} after {_MAX_EXTRACTION_RETRIES} attempts due to persistent retryable issues.")
-        return None
 
-    except Exception as e: # Catch errors in initial setup (file reading, client init)
-        logging.error(f"Outer error setting up extraction for {pdf_path}: {str(e)}")
-        return None
-
-def process_pdf_file(pdf_path: str) -> Optional[Dict[str, Any]]:
-    """
-    Process a single PDF file and return the extracted data with the filename.
-    
-    Args:
-        pdf_path: Path to the PDF file
-        
-    Returns:
-        Dictionary with extracted data and filename or None if extraction fails
-    """
-    try:
-        filename = os.path.basename(pdf_path)
-        # extract_invoice_data now handles its own retries
-        data = extract_invoice_data(pdf_path) 
-        
-        if data:
-            data["file_name"] = filename
-            return data
-        else:
-            # extract_invoice_data returning None means it failed after its retries
-            logging.warning(f"Processing failed for {pdf_path} after all internal retries.")
-            return None
-    except Exception as e:
-        logging.error(f"Error in process_pdf_file for {pdf_path}: {str(e)}")
-        return None
+# This function is now replaced by direct async calls in main()
 
 def format_registration_numbers(reg_numbers: List[Dict[str, str]]) -> str:
     """
@@ -268,109 +216,156 @@ def save_failed_files_to_csv(failed_file_paths: List[str], output_csv_file: str 
     except Exception as e:
         logging.error(f"Error saving failed files list to CSV '{output_csv_file}': {str(e)}")
 
-def main():
+async def main():
     """
-    Main function to process all PDF files in the input folder with multi-level retries.
+    Async main function to process all PDF files in the input folder with async parallelization.
     """
     input_folder = "input"
     output_csv_file = "output.csv"
-    json_responses_folder = "json_responses" 
-    
-    MAX_GLOBAL_RETRY_PASSES = 2  # e.g., 2 retry passes after the initial pass (total 3 attempts for a batch)
-    GLOBAL_RETRY_BATCH_DELAY_SECONDS = 30 
-    INDIVIDUAL_PROCESSING_DELAY_SECONDS = 1 
-    
-    # Clear and then ensure creation of json_responses directory
+    json_responses_folder = "json_responses"
+
+    MAX_GLOBAL_RETRY_PASSES = 2
+    GLOBAL_RETRY_BATCH_DELAY_SECONDS = 30
+
+    # Housekeeping – clear old response artefacts
     if os.path.exists(json_responses_folder):
         try:
             shutil.rmtree(json_responses_folder)
-            logging.info(f"Successfully cleared existing json_responses folder: {json_responses_folder}")
+            logging.info(f"Cleared {json_responses_folder} directory.")
         except Exception as e:
-            logging.error(f"Error clearing json_responses folder '{json_responses_folder}': {str(e)}. Please check permissions or manually delete it.")
-            # Optionally, decide if script should exit if clearing fails, for now it will continue and try to create/use it.
-
+            logging.error(f"Unable to clear {json_responses_folder}: {str(e)}")
     os.makedirs(json_responses_folder, exist_ok=True)
     os.makedirs(input_folder, exist_ok=True)
-    
-    if not os.path.exists(input_folder): # Should be redundant due to makedirs
-        logging.error(f"Input folder '{input_folder}' does not exist and could not be created.")
+
+    pdf_files_initial = [
+        os.path.join(input_folder, f)
+        for f in os.listdir(input_folder)
+        if f.lower().endswith(".pdf") and os.path.isfile(os.path.join(input_folder, f))
+    ]
+    if not pdf_files_initial:
+        logging.warning(f"No PDF files present in '{input_folder}'. Exiting.")
         return
-    
-    initial_pdf_files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) 
-                         if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(input_folder, f))]
-    
-    if not initial_pdf_files:
-        logging.warning(f"No PDF files found in '{input_folder}'")
-        return
-    
-    logging.info(f"Found {len(initial_pdf_files)} PDF files for initial processing.")
-    
-    master_processed_data_list = [] 
-    files_requiring_processing = list(initial_pdf_files) 
-    
-    # Loop for initial pass (pass 0) and then global retry passes
-    # Total attempts for a batch = 1 (initial) + MAX_GLOBAL_RETRY_PASSES
-    for pass_num in range(MAX_GLOBAL_RETRY_PASSES + 1):
-        if not files_requiring_processing:
-            logging.info("All pending files have been processed successfully or no files were left for this pass.")
-            break 
 
-        current_batch_size = len(files_requiring_processing)
-        pass_description = f"Initial Pass ({current_batch_size} files)"
-        if pass_num > 0:
-            pass_description = f"Global Retry Pass {pass_num}/{MAX_GLOBAL_RETRY_PASSES} ({current_batch_size} files)"
-            logging.info(f"--- Starting {pass_description} ---")
-            logging.info(f"Waiting {GLOBAL_RETRY_BATCH_DELAY_SECONDS} seconds before this retry pass...")
-            time.sleep(GLOBAL_RETRY_BATCH_DELAY_SECONDS)
-        else: 
-            logging.info(f"--- Starting {pass_description} ---")
+    logging.info(f"🔍 Discovered {len(pdf_files_initial)} PDFs to process.")
+    logging.info(f"⚙️  Configuration: Max concurrent API calls = {MAX_CONCURRENT_API_CALLS}")
+    logging.info(f"🤖 Using model: gemini-2.5-pro via Vertex AI")
 
-        successfully_processed_this_pass_data = []
-        failed_in_this_pass_paths = []
-        
-        max_workers = 4  # Consider making this configurable or adjusting based on API limits
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(process_pdf_file, pdf_path): pdf_path 
-                       for pdf_path in files_requiring_processing}
-            
-            with tqdm(total=len(futures), desc=pass_description) as pbar:
-                for future in as_completed(futures):
-                    pdf_file_path_for_future = futures[future]
-                    try:
-                        result_data = future.result() # process_pdf_file returns data or None
-                        if result_data:
-                            successfully_processed_this_pass_data.append(result_data)
-                        else:
-                            failed_in_this_pass_paths.append(pdf_file_path_for_future)
-                    except Exception as e_outer_loop:
-                        logging.error(f"Unhandled error in main processing loop for {pdf_file_path_for_future} during {pass_description}: {str(e_outer_loop)}")
-                        failed_in_this_pass_paths.append(pdf_file_path_for_future)
-                    finally:
-                        pbar.update(1)
-                        time.sleep(INDIVIDUAL_PROCESSING_DELAY_SECONDS) 
-        
-        master_processed_data_list.extend(successfully_processed_this_pass_data)
-        files_requiring_processing = failed_in_this_pass_paths 
-
-        if not files_requiring_processing:
-            logging.info(f"All files from this batch were processed successfully in {pass_description}.")
-        else:
-            logging.info(f"{len(files_requiring_processing)} files failed in {pass_description} and will be handled in the next pass if attempts remain.")
-
-    permanently_failed_file_paths = files_requiring_processing
-
-    logging.info(f"Total successfully processed files: {len(master_processed_data_list)} out of {len(initial_pdf_files)} initial files.")
-    save_to_csv(master_processed_data_list, output_csv_file)
-
-    if permanently_failed_file_paths:
-        logging.warning(f"Number of permanently failed files after all passes: {len(permanently_failed_file_paths)}")
-        save_failed_files_to_csv(permanently_failed_file_paths, "failed_extraction_files.csv")
+    # Shared genai client (re-used across requests)
+    # When using Vertex AI, don't pass API key - use application default credentials
+    if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true":
+        client = genai.Client()  # Uses application default credentials
+        logging.info("🔐 Using Vertex AI with Application Default Credentials")
     else:
-        logging.info("No files permanently failed extraction after all passes.")
+        client = genai.Client(api_key=API_KEY)
+        logging.info("🔐 Using regular Gemini API with API key")
+    
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_API_CALLS)
+
+    processed_data: List[Dict[str, Any]] = []
+    pending_files: List[str] = list(pdf_files_initial)
+
+    for pass_idx in range(MAX_GLOBAL_RETRY_PASSES + 1):
+        if not pending_files:
+            break
+
+        pass_desc = "Initial Pass" if pass_idx == 0 else f"Retry Pass {pass_idx}/{MAX_GLOBAL_RETRY_PASSES}"
+        if pass_idx > 0:
+            logging.info(f"Waiting {GLOBAL_RETRY_BATCH_DELAY_SECONDS}s before {pass_desc} ...")
+            await asyncio.sleep(GLOBAL_RETRY_BATCH_DELAY_SECONDS)
+        logging.info(f"--- Starting {pass_desc} ({len(pending_files)} files) ---")
+
+        # Kick off tasks concurrently with controlled concurrency inside extract function.
+        task_to_path = {
+            asyncio.create_task(extract_invoice_data_async(f, client, semaphore)): f for f in pending_files
+        }
+
+        current_pass_success: List[Dict[str, Any]] = []
+        failed_this_pass: List[str] = []
+
+        # Use tqdm for progress tracking with detailed descriptions
+        with tqdm(
+            total=len(task_to_path),
+            desc=f"{pass_desc}",
+            unit="file",
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+        ) as pbar:
+            # Create a list to track tasks and their corresponding paths
+            tasks = list(task_to_path.keys())
+            paths = list(task_to_path.values())
+            
+            # Use gather to await all tasks and track completion
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            for task, pdf_path, result in zip(tasks, paths, results):
+                filename = os.path.basename(pdf_path)
+                
+                try:
+                    if isinstance(result, Exception):
+                        # Task raised an exception
+                        failed_this_pass.append(pdf_path)
+                        pbar.set_postfix_str(f"💥 {filename}")
+                        logging.error(f"[ERROR] {filename} - task exception: {str(result)[:100]}")
+                    elif result:
+                        # Task completed successfully with data
+                        result["file_name"] = filename
+                        current_pass_success.append(result)
+                        pbar.set_postfix_str(f"✅ {filename}")
+                        logging.info(f"[SUCCESS] {filename} - extraction completed")
+                    else:
+                        # Task completed but returned None (failed extraction)
+                        failed_this_pass.append(pdf_path)
+                        pbar.set_postfix_str(f"❌ {filename}")
+                        logging.warning(f"[FAILED] {filename} - extraction failed")
+                except Exception as e:
+                    failed_this_pass.append(pdf_path)
+                    pbar.set_postfix_str(f"💥 {filename}")
+                    logging.error(f"[ERROR] {filename} - unexpected error: {str(e)[:100]}")
+                finally:
+                    pbar.update(1)
+        
+        # Summary logging for this pass
+        success_count = len(current_pass_success)
+        failed_count = len(failed_this_pass)
+        logging.info(f"📊 {pass_desc} Summary: {success_count} successful, {failed_count} failed")
+        
+        if success_count > 0:
+            logging.info(f"✅ Successfully processed files: {[os.path.basename(item['file_name']) for item in current_pass_success]}")
+        if failed_count > 0:
+            logging.warning(f"❌ Failed files: {[os.path.basename(f) for f in failed_this_pass]}")
+
+        processed_data.extend(current_pass_success)
+        pending_files = failed_this_pass
+
+    # Final summary and results
+    total_files = len(pdf_files_initial)
+    successful_files = len(processed_data)
+    failed_files = len(pending_files)
+    
+    logging.info(f"🎯 FINAL RESULTS:")
+    logging.info(f"   📁 Total files: {total_files}")
+    logging.info(f"   ✅ Successful: {successful_files} ({successful_files/total_files*100:.1f}%)")
+    logging.info(f"   ❌ Failed: {failed_files} ({failed_files/total_files*100:.1f}%)")
+
+    # Persist results
+    save_to_csv(processed_data, output_csv_file)
+
+    if pending_files:
+        logging.warning(f"📋 {len(pending_files)} files permanently failed after all retries. See failed_extraction_files.csv.")
+        save_failed_files_to_csv(pending_files, "failed_extraction_files.csv")
+    else:
+        logging.info("🎉 All files processed successfully!")
 
 if __name__ == "__main__":
+    # Log configuration
+    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+    if use_vertex:
+        project = os.getenv("GOOGLE_CLOUD_PROJECT", "not-set")
+        location = os.getenv("GOOGLE_CLOUD_LOCATION", "not-set")
+        logging.info(f"🚀 Starting with Vertex AI - Project: {project}, Location: {location}")
+    else:
+        logging.info("🚀 Starting with regular Gemini API")
+    
     start_time = time.time()
-    main()
+    asyncio.run(main())
     elapsed_time = time.time() - start_time
     logging.info(f"Total execution time: {elapsed_time:.2f} seconds")
