@@ -293,7 +293,7 @@ async def main():
             tasks = list(task_to_path.keys())
             paths = list(task_to_path.values())
             
-            # Use gather to await all tasks and track completion
+            # Use gather to await all tasks and track completion (maintains parallelism)
             results = await asyncio.gather(*tasks, return_exceptions=True)
             
             for task, pdf_path, result in zip(tasks, paths, results):
