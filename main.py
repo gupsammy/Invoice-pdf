@@ -14,6 +14,9 @@ from tqdm import tqdm
 from google import genai
 from google.genai import types
 
+# Import prompts
+from prompts import SYSTEM_INSTRUCTION
+
 # Constants for retry logic and async configuration
 _MAX_EXTRACTION_RETRIES = 3  # Max retries for a single file extraction attempt
 _RETRY_DELAY_BASE_SECONDS = 10  # Base delay for retries, used with exponential backoff
@@ -54,26 +57,6 @@ async def extract_invoice_data_async(
     pdf_path_obj = Path(pdf_path)
     pdf_bytes = pdf_path_obj.read_bytes()
     
-    system_instruction = """You are provided with a PDF invoice. Extract the following information and return a well-structured JSON object:
-
-1. vendor_name: Full legal name of the vendor/supplier
-2. pan: PAN number of the vendor 
-3. registration_numbers: Array of objects with "type" (e.g., GST, VAT, CST, TIN, GSTIN) and "value" fields
-4. invoice_date: Date in YYYY-MM-DD format when possible
-5. document_number: PO/document number or reference 
-6. invoice_number: Invoice/bill number
-7. description: Brief description of goods/services
-8. basic_amount: Base amount before taxes
-9. tax_amount: Total tax amount (sum of all taxes).
-10. total_amount: Total invoice value including taxes
-
-Notes:
-- For missing values, use null (not empty strings)
-- If multiple items are listed, combine descriptions and sum amounts
-- For registration numbers, capture all visible identifiers
-- Extract data from letterhead and body text as needed
-
-Return only the JSON object without additional comments."""
 
     contents = [
         types.Part.from_bytes(
@@ -82,7 +65,7 @@ Return only the JSON object without additional comments."""
         ),
         "Extract details from this pdf"
     ]
-    config = types.GenerateContentConfig(system_instruction=system_instruction)
+    config = types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
     
     async with semaphore:
         for attempt in range(_MAX_EXTRACTION_RETRIES):
