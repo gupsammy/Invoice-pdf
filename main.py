@@ -17,17 +17,39 @@ from google.genai import types
 # Import prompts
 from prompts import SYSTEM_INSTRUCTION
 
-# Constants for retry logic and async configuration
+# ===========================
+# CONFIGURATION CONSTANTS
+# ===========================
+
+# Folder Configuration - Modify these as needed
+INPUT_FOLDER = "input"
+OUTPUT_FOLDER = "output"
+LOGS_FOLDER = "logs"
+JSON_RESPONSES_FOLDER = "json_responses"
+
+# File Configuration
+OUTPUT_CSV_FILE = "hierarchical_extraction.csv"
+FAILED_CSV_FILE = "failed_extraction_files.csv"
+LOG_FILE = "invoice_extraction.log"
+
+# Processing Configuration
 _MAX_EXTRACTION_RETRIES = 3  # Max retries for a single file extraction attempt
 _RETRY_DELAY_BASE_SECONDS = 10  # Base delay for retries, used with exponential backoff
 MAX_CONCURRENT_API_CALLS = 5  # Max concurrent API calls for async parallelization
+MAX_GLOBAL_RETRY_PASSES = 2  # Max global retry passes for failed files
+GLOBAL_RETRY_BATCH_DELAY_SECONDS = 30  # Delay between global retry passes
 
-# Set up logging
+# Ensure directories exist
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+os.makedirs(LOGS_FOLDER, exist_ok=True)
+os.makedirs(JSON_RESPONSES_FOLDER, exist_ok=True)
+
+# Set up logging with configured paths
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("invoice_extraction.log"),
+        logging.FileHandler(os.path.join(LOGS_FOLDER, LOG_FILE)),
         logging.StreamHandler()
     ]
 )
@@ -42,6 +64,7 @@ async def extract_invoice_data_async(
     pdf_path: str,
     client: "genai.Client", 
     semaphore: asyncio.Semaphore,
+    json_responses_folder: str = JSON_RESPONSES_FOLDER
 ) -> Optional[Dict[str, Any]]:
     """
     Asynchronously extract invoice data from a PDF file using Gemini API, with retries.
@@ -77,11 +100,9 @@ async def extract_invoice_data_async(
                     config=config
                 )
                 
-                json_responses_dir = "json_responses"
-                os.makedirs(json_responses_dir, exist_ok=True)
                 pdf_filename_stem = pdf_path_obj.stem
                 json_log_filename = f"{pdf_filename_stem}_response_attempt_{attempt+1}.txt"
-                json_log_path = os.path.join(json_responses_dir, json_log_filename)
+                json_log_path = os.path.join(json_responses_folder, json_log_filename)
                 with open(json_log_path, 'w', encoding='utf-8') as f_json_log:
                     f_json_log.write(response.text)
                     
@@ -96,9 +117,19 @@ async def extract_invoice_data_async(
                     logging.error(f"[{pdf_path_obj.name}] Un-parsable response – giving up without retry: {resp_txt[:120]}")
                     return None
 
-                invoice_data = json.loads(resp_txt[json_start:json_end])
-                logging.info(f"[{pdf_path_obj.name}] Data extraction successful.")
-                return invoice_data
+                hierarchical_data = json.loads(resp_txt[json_start:json_end])
+                
+                # Validate hierarchical structure
+                if not isinstance(hierarchical_data, dict) or "document_status" not in hierarchical_data:
+                    logging.warning(f"[{pdf_path_obj.name}] Response missing expected hierarchical structure")
+                    return None
+                
+                # Add file metadata
+                hierarchical_data["file_name"] = pdf_path_obj.name
+                hierarchical_data["file_path"] = str(pdf_path_obj)
+                
+                logging.info(f"[{pdf_path_obj.name}] Hierarchical data extraction successful.")
+                return hierarchical_data
 
             except json.JSONDecodeError as jde:
                 logging.error(f"[{pdf_path_obj.name}] JSON decode failed: {str(jde)} – response excerpt: {resp_txt[:120]}")
@@ -129,24 +160,30 @@ def format_registration_numbers(reg_numbers: List[Dict[str, str]]) -> str:
     
     return ", ".join([f"{reg.get('type', 'N/A')}:{reg.get('value', 'N/A')}" for reg in reg_numbers])
 
-def save_to_csv(data_list: List[Dict[str, Any]], output_file: str = "output.csv") -> None:
+def save_hierarchical_to_csv(hierarchical_data_list: List[Dict[str, Any]], output_file: str = "output.csv") -> None:
     """
-    Save the extracted data to a CSV file.
+    Save the hierarchical extracted data to a CSV file with proper structure.
     
     Args:
-        data_list: List of dictionaries containing the extracted data
+        hierarchical_data_list: List of hierarchical data dictionaries
         output_file: Path to the output CSV file
     """
-    if not data_list:
+    if not hierarchical_data_list:
         logging.warning("No data to save to CSV as data_list is empty.")
-        # Create an empty CSV with headers if no data
-        # return # Or create empty CSV with headers
+        return
     
     fieldnames = [
-        "Name of the vendor", "PAN", "VAT / CST / Other registration number",
+        # File metadata
+        "File Name", "File Path",
+        # Document status fields
+        "Readable", "Contains Invoices", "Document Type", "Multiple Documents", "Orientation Issues",
+        # Extracted data fields (legacy compatible where possible)
+        "Data Source", "Name of the vendor", "PAN", "VAT / CST / Other registration number",
         "Invoice Date", "PO No/ Document No", "Invoice no", 
         "Description of goods / service", "Basic Amount", "Tax Amount", 
-        "Invoice Value", "File Name"
+        "Invoice Value", "Page Numbers",
+        # Processing notes
+        "Processing Notes"
     ]
     
     try:
@@ -154,30 +191,74 @@ def save_to_csv(data_list: List[Dict[str, Any]], output_file: str = "output.csv"
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             
-            if not data_list:
-                logging.info(f"No data to write to {output_file}, but header is written.")
-                return
-
-            for item in data_list:
-                reg_numbers = format_registration_numbers(item.get("registration_numbers", []))
-                row = {
-                    "Name of the vendor": item.get("vendor_name"),
-                    "PAN": item.get("pan"),
-                    "VAT / CST / Other registration number": reg_numbers,
-                    "Invoice Date": item.get("invoice_date"),
-                    "PO No/ Document No": item.get("document_number"),
-                    "Invoice no": item.get("invoice_number"),
-                    "Description of goods / service": item.get("description"),
-                    "Basic Amount": item.get("basic_amount"),
-                    "Tax Amount": item.get("tax_amount"),
-                    "Invoice Value": item.get("total_amount"),
-                    "File Name": item.get("file_name", "") # Ensure file_name is present
-                }
-                writer.writerow(row)
+            for item in hierarchical_data_list:
+                # Extract document status
+                doc_status = item.get("document_status", {})
+                extracted_data = item.get("extracted_data", [])
                 
-        logging.info(f"Data successfully saved to {output_file}")
+                # If no extracted data, create one row with document status only
+                if not extracted_data:
+                    row = {
+                        "File Name": item.get("file_name", ""),
+                        "File Path": item.get("file_path", ""),
+                        "Readable": doc_status.get("readable", ""),
+                        "Contains Invoices": doc_status.get("contains_invoices", ""),
+                        "Document Type": doc_status.get("document_type", ""),
+                        "Multiple Documents": doc_status.get("multiple_documents", ""),
+                        "Orientation Issues": doc_status.get("orientation_issues", ""),
+                        "Data Source": "",
+                        "Name of the vendor": "",
+                        "PAN": "",
+                        "VAT / CST / Other registration number": "",
+                        "Invoice Date": "",
+                        "PO No/ Document No": "",
+                        "Invoice no": "",
+                        "Description of goods / service": "",
+                        "Basic Amount": "",
+                        "Tax Amount": "",
+                        "Invoice Value": "",
+                        "Page Numbers": "",
+                        "Processing Notes": item.get("processing_notes", "")
+                    }
+                    writer.writerow(row)
+                else:
+                    # Create one row per extracted data entry
+                    for data_entry in extracted_data:
+                        # Format registration numbers
+                        reg_numbers = data_entry.get("registration_numbers", [])
+                        reg_numbers_str = ", ".join([f"{reg.get('type', 'N/A')}:{reg.get('value', 'N/A')}" for reg in reg_numbers])
+                        
+                        # Format page numbers
+                        page_numbers = data_entry.get("page_numbers", [])
+                        page_numbers_str = ", ".join(map(str, page_numbers)) if page_numbers else ""
+                        
+                        row = {
+                            "File Name": item.get("file_name", ""),
+                            "File Path": item.get("file_path", ""),
+                            "Readable": doc_status.get("readable", ""),
+                            "Contains Invoices": doc_status.get("contains_invoices", ""),
+                            "Document Type": doc_status.get("document_type", ""),
+                            "Multiple Documents": doc_status.get("multiple_documents", ""),
+                            "Orientation Issues": doc_status.get("orientation_issues", ""),
+                            "Data Source": data_entry.get("data_source", ""),
+                            "Name of the vendor": data_entry.get("vendor_name", ""),
+                            "PAN": data_entry.get("pan", ""),
+                            "VAT / CST / Other registration number": reg_numbers_str,
+                            "Invoice Date": data_entry.get("invoice_date", ""),
+                            "PO No/ Document No": data_entry.get("document_number", ""),
+                            "Invoice no": data_entry.get("invoice_number", ""),
+                            "Description of goods / service": data_entry.get("description", ""),
+                            "Basic Amount": data_entry.get("basic_amount", ""),
+                            "Tax Amount": data_entry.get("tax_amount", ""),
+                            "Invoice Value": data_entry.get("total_amount", ""),
+                            "Page Numbers": page_numbers_str,
+                            "Processing Notes": item.get("processing_notes", "")
+                        }
+                        writer.writerow(row)
+                
+        logging.info(f"Hierarchical data successfully saved to {output_file}")
     except Exception as e:
-        logging.error(f"Error saving data to CSV '{output_file}': {str(e)}")
+        logging.error(f"Error saving hierarchical data to CSV '{output_file}': {str(e)}")
 
 def save_failed_files_to_csv(failed_file_paths: List[str], output_csv_file: str = "failed_extraction_files.csv"):
     """
@@ -201,14 +282,11 @@ def save_failed_files_to_csv(failed_file_paths: List[str], output_csv_file: str 
 
 async def main():
     """
-    Async main function to process all PDF files in the input folder with async parallelization.
+    Async main function to process all PDF files in the configured input folder with async parallelization.
     """
-    input_folder = "input"
-    output_csv_file = "output.csv"
-    json_responses_folder = "json_responses"
-
-    MAX_GLOBAL_RETRY_PASSES = 2
-    GLOBAL_RETRY_BATCH_DELAY_SECONDS = 30
+    input_folder = INPUT_FOLDER
+    output_csv_file = os.path.join(OUTPUT_FOLDER, OUTPUT_CSV_FILE)
+    json_responses_folder = JSON_RESPONSES_FOLDER
 
     # Housekeeping – clear old response artefacts
     if os.path.exists(json_responses_folder):
@@ -231,7 +309,7 @@ async def main():
 
     logging.info(f"🔍 Discovered {len(pdf_files_initial)} PDFs to process.")
     logging.info(f"⚙️  Configuration: Max concurrent API calls = {MAX_CONCURRENT_API_CALLS}")
-    logging.info(f"🤖 Using model: gemini-2.5-pro via Vertex AI")
+    logging.info(f"🤖 Using model: gemini-2.5-pro with improved hierarchical prompt")
 
     # Shared genai client (re-used across requests)
     # When using Vertex AI, don't pass API key - use application default credentials
@@ -259,7 +337,7 @@ async def main():
 
         # Kick off tasks concurrently with controlled concurrency inside extract function.
         task_to_path = {
-            asyncio.create_task(extract_invoice_data_async(f, client, semaphore)): f for f in pending_files
+            asyncio.create_task(extract_invoice_data_async(f, client, semaphore, json_responses_folder)): f for f in pending_files
         }
 
         current_pass_success: List[Dict[str, Any]] = []
@@ -289,11 +367,11 @@ async def main():
                         pbar.set_postfix_str(f"💥 {filename}")
                         logging.error(f"[ERROR] {filename} - task exception: {str(result)[:100]}")
                     elif result:
-                        # Task completed successfully with data
-                        result["file_name"] = filename
+                        # Task completed successfully with hierarchical data
                         current_pass_success.append(result)
-                        pbar.set_postfix_str(f"✅ {filename}")
-                        logging.info(f"[SUCCESS] {filename} - extraction completed")
+                        doc_type = result.get("document_status", {}).get("document_type", "unknown")
+                        pbar.set_postfix_str(f"✅ {filename} ({doc_type})")
+                        logging.info(f"[SUCCESS] {filename} - hierarchical extraction completed ({doc_type})")
                     else:
                         # Task completed but returned None (failed extraction)
                         failed_this_pass.append(pdf_path)
@@ -312,7 +390,7 @@ async def main():
         logging.info(f"📊 {pass_desc} Summary: {success_count} successful, {failed_count} failed")
         
         if success_count > 0:
-            logging.info(f"✅ Successfully processed files: {[os.path.basename(item['file_name']) for item in current_pass_success]}")
+            logging.info(f"✅ Successfully processed files: {[item.get('file_name', 'unknown') for item in current_pass_success]}")
         if failed_count > 0:
             logging.warning(f"❌ Failed files: {[os.path.basename(f) for f in failed_this_pass]}")
 
@@ -329,12 +407,24 @@ async def main():
     logging.info(f"   ✅ Successful: {successful_files} ({successful_files/total_files*100:.1f}%)")
     logging.info(f"   ❌ Failed: {failed_files} ({failed_files/total_files*100:.1f}%)")
 
+    # Document type breakdown
+    if processed_data:
+        doc_types = {}
+        for item in processed_data:
+            doc_type = item.get("document_status", {}).get("document_type", "unknown")
+            doc_types[doc_type] = doc_types.get(doc_type, 0) + 1
+        
+        logging.info(f"📊 Document Type Breakdown:")
+        for doc_type, count in doc_types.items():
+            logging.info(f"   {doc_type}: {count} files")
+
     # Persist results
-    save_to_csv(processed_data, output_csv_file)
+    save_hierarchical_to_csv(processed_data, output_csv_file)
 
     if pending_files:
-        logging.warning(f"📋 {len(pending_files)} files permanently failed after all retries. See failed_extraction_files.csv.")
-        save_failed_files_to_csv(pending_files, "failed_extraction_files.csv")
+        failed_csv_path = os.path.join(OUTPUT_FOLDER, FAILED_CSV_FILE)
+        logging.warning(f"📋 {len(pending_files)} files permanently failed after all retries. See {failed_csv_path}.")
+        save_failed_files_to_csv(pending_files, failed_csv_path)
     else:
         logging.info("🎉 All files processed successfully!")
 
