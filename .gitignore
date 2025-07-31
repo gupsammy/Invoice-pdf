@@ -4,3 +4,5 @@ input
 json_responses
 *.log
 *.csv
+.DS_Store
+__pycache__/
