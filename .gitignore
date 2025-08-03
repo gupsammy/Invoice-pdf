@@ -6,3 +6,8 @@ json_responses
 *.csv
 .DS_Store
 __pycache__/
+/logs/
+/output/
+/archive/
+.claude
+CLAUDE.md

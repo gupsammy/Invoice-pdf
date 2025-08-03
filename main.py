@@ -5,6 +5,7 @@ import time
 import logging
 import shutil
 import asyncio
+import argparse
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
@@ -39,20 +40,25 @@ MAX_CONCURRENT_API_CALLS = 5  # Max concurrent API calls for async parallelizati
 MAX_GLOBAL_RETRY_PASSES = 2  # Max global retry passes for failed files
 GLOBAL_RETRY_BATCH_DELAY_SECONDS = 30  # Delay between global retry passes
 
-# Ensure directories exist
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-os.makedirs(LOGS_FOLDER, exist_ok=True)
-os.makedirs(JSON_RESPONSES_FOLDER, exist_ok=True)
+# Directory creation moved to main() function to support command line arguments
 
-# Set up logging with configured paths
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(os.path.join(LOGS_FOLDER, LOG_FILE)),
-        logging.StreamHandler()
-    ]
-)
+def setup_logging(logs_folder):
+    """Set up logging with the specified logs folder."""
+    # Ensure logs directory exists
+    os.makedirs(logs_folder, exist_ok=True)
+    
+    # Clear any existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(os.path.join(logs_folder, LOG_FILE)),
+            logging.StreamHandler()
+        ]
+    )
 
 # Load environment variables
 load_dotenv()
@@ -280,13 +286,25 @@ def save_failed_files_to_csv(failed_file_paths: List[str], output_csv_file: str 
     except Exception as e:
         logging.error(f"Error saving failed files list to CSV '{output_csv_file}': {str(e)}")
 
-async def main():
+async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None):
     """
     Async main function to process all PDF files in the configured input folder with async parallelization.
     """
-    input_folder = INPUT_FOLDER
-    output_csv_file = os.path.join(OUTPUT_FOLDER, OUTPUT_CSV_FILE)
-    json_responses_folder = JSON_RESPONSES_FOLDER
+    # Use provided arguments or fall back to defaults
+    input_folder = input_folder or INPUT_FOLDER
+    output_folder = output_folder or OUTPUT_FOLDER
+    logs_folder = logs_folder or LOGS_FOLDER
+    json_responses_folder = json_responses_folder or JSON_RESPONSES_FOLDER
+    
+    # Ensure directories exist
+    os.makedirs(output_folder, exist_ok=True)
+    os.makedirs(logs_folder, exist_ok=True)
+    os.makedirs(json_responses_folder, exist_ok=True)
+    
+    # Set up logging with the correct logs folder
+    setup_logging(logs_folder)
+    
+    output_csv_file = os.path.join(output_folder, OUTPUT_CSV_FILE)
 
     # Housekeeping – clear old response artefacts
     if os.path.exists(json_responses_folder):
@@ -422,13 +440,29 @@ async def main():
     save_hierarchical_to_csv(processed_data, output_csv_file)
 
     if pending_files:
-        failed_csv_path = os.path.join(OUTPUT_FOLDER, FAILED_CSV_FILE)
+        failed_csv_path = os.path.join(output_folder, FAILED_CSV_FILE)
         logging.warning(f"📋 {len(pending_files)} files permanently failed after all retries. See {failed_csv_path}.")
         save_failed_files_to_csv(pending_files, failed_csv_path)
     else:
         logging.info("🎉 All files processed successfully!")
 
 if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Extract invoice data from PDF files using Gemini AI')
+    parser.add_argument('--input', default=INPUT_FOLDER, 
+                       help=f'Input folder containing PDF files (default: {INPUT_FOLDER})')
+    parser.add_argument('--output', default=OUTPUT_FOLDER,
+                       help=f'Output folder for results (default: {OUTPUT_FOLDER})')
+    parser.add_argument('--logs', default=LOGS_FOLDER,
+                       help=f'Logs folder (default: {LOGS_FOLDER})')
+    parser.add_argument('--json-responses', default=JSON_RESPONSES_FOLDER,
+                       help=f'JSON responses folder (default: {JSON_RESPONSES_FOLDER})')
+    
+    args = parser.parse_args()
+    
+    # Set up basic logging first so we can log the startup messages
+    setup_logging(args.logs)
+    
     # Log configuration
     use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
     if use_vertex:
@@ -438,7 +472,17 @@ if __name__ == "__main__":
     else:
         logging.info("🚀 Starting with regular Gemini API")
     
+    logging.info(f"📂 Input folder: {args.input}")
+    logging.info(f"📁 Output folder: {args.output}")
+    logging.info(f"📋 Logs folder: {args.logs}")
+    logging.info(f"🗂️  JSON responses folder: {args.json_responses}")
+    
     start_time = time.time()
-    asyncio.run(main())
+    asyncio.run(main(
+        input_folder=args.input,
+        output_folder=args.output, 
+        logs_folder=args.logs,
+        json_responses_folder=args.json_responses
+    ))
     elapsed_time = time.time() - start_time
     logging.info(f"Total execution time: {elapsed_time:.2f} seconds")

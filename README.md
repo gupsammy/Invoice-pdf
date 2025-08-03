@@ -27,7 +27,7 @@ This tool extracts structured data from PDF invoices using Google's Gemini AI an
 Simply run the script:
 
 ```
-python invoice_extractor.py
+python main.py
 ```
 
 The script will:
