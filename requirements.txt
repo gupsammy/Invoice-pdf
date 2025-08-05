@@ -1,3 +1,5 @@
 python-dotenv==1.0.0
 tqdm==4.66.1
 google-genai
+PyMuPDF==1.23.0
+openpyxl>=3.0.0
