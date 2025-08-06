@@ -46,7 +46,7 @@ LOG_FILE = "invoice_extraction_2step_enhanced.log"
 # Processing Configuration
 _MAX_RETRIES = 3
 _RETRY_DELAY_BASE_SECONDS = 10
-MAX_CONCURRENT_CLASSIFY = 15  # Faster for lightweight classification
+MAX_CONCURRENT_CLASSIFY = 10  # Faster for lightweight classification
 MAX_CONCURRENT_EXTRACT = 5    # Conservative for heavy extraction
 
 # Enhanced 2-Step Configuration
