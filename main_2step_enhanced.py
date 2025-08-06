@@ -991,15 +991,13 @@ def create_excel_report(
         if employee_results:
             ws_employee = workbook.create_sheet("Employee_T&E")
             
-            # Headers for employee T&E (same as CSV)
+            # Headers for employee T&E (only include specified headers)
             headers = [
-                "File Name", "File Path", "Document Type", "Readable", "Contains Invoices",
-                "Multiple Documents", "Orientation Issues", "Data Source", "Vendor Name",
-                "Employee Code", "Department", "PAN", "Registration Numbers", 
-                "Invoice Date", "Document Number", "Invoice Number", "Description", 
-                "Basic Amount", "Tax Amount", "Total Amount", "Currency Code", 
-                "Original Amount", "Amount Calculated", "Calculation Method", 
-                "Total Pages In PDF", "Page Numbers", "Processing Notes"
+                "File Name", "Document Type", "Readable", "Orientation Issues", 
+                "Data Source", "Employee Name", "Employee Code", "Department", 
+                "Invoice Date", "Description", "Basic Amount", "Tax Amount", 
+                "Total Amount", "Currency Code", "Original Amount", "Amount Calculated", 
+                "Calculation Method", "Page Numbers", "Processing Notes"
             ]
             
             # Add headers with styling
@@ -1018,15 +1016,10 @@ def create_excel_report(
                     # Create row with document status only
                     row_data = [
                         result.get("file_name", ""),
-                        result.get("file_path", ""),
                         result.get("document_type_processed", ""),
                         doc_status.get("readable", ""),
-                        doc_status.get("contains_invoices", ""),
-                        doc_status.get("multiple_documents", ""),
                         doc_status.get("orientation_issues", ""),
-                        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-                        result.get("total_pages_in_pdf", ""),
-                        "",
+                        "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                         result.get("processing_notes", "")
                     ]
                     
@@ -1044,21 +1037,14 @@ def create_excel_report(
                         
                         row_data = [
                             result.get("file_name", ""),
-                            result.get("file_path", ""),
                             result.get("document_type_processed", ""),
                             doc_status.get("readable", ""),
-                            doc_status.get("contains_invoices", ""),
-                            doc_status.get("multiple_documents", ""),
                             doc_status.get("orientation_issues", ""),
                             data_entry.get("data_source", ""),
-                            data_entry.get("vendor_name", ""),
+                            data_entry.get("employee_name", ""),
                             data_entry.get("employee_code", ""),
                             data_entry.get("department", ""),
-                            data_entry.get("pan", ""),
-                            reg_numbers_str,
                             data_entry.get("invoice_date", ""),
-                            data_entry.get("document_number", ""),
-                            data_entry.get("invoice_number", ""),
                             data_entry.get("description", ""),
                             data_entry.get("basic_amount", ""),
                             data_entry.get("tax_amount", ""),
@@ -1067,7 +1053,6 @@ def create_excel_report(
                             data_entry.get("original_amount", ""),
                             data_entry.get("amount_calculated", ""),
                             data_entry.get("calculation_method", ""),
-                            result.get("total_pages_in_pdf", ""),
                             page_numbers_str,
                             result.get("processing_notes", "")
                         ]
@@ -1080,9 +1065,9 @@ def create_excel_report(
         if vendor_results:
             ws_vendor = workbook.create_sheet("Vendor_Invoices")
             
-            # Headers for vendor invoices (same as CSV)
+            # Headers for vendor invoices (removed File Path)
             headers = [
-                "File Name", "File Path", "Document Type", "Readable", "Contains Invoices",
+                "File Name", "Document Type", "Readable", "Contains Invoices",
                 "Multiple Documents", "Orientation Issues", "Data Source", "Issuer", 
                 "Consignor", "Consignee", "Vendor Name", "Original Vendor Name", 
                 "Invoice Type", "PAN", "Registration Numbers", "Invoice Date", 
@@ -1108,7 +1093,6 @@ def create_excel_report(
                     # Create row with document status only
                     row_data = [
                         result.get("file_name", ""),
-                        result.get("file_path", ""),
                         result.get("document_type_processed", ""),
                         doc_status.get("readable", ""),
                         doc_status.get("contains_invoices", ""),
@@ -1134,7 +1118,6 @@ def create_excel_report(
                         
                         row_data = [
                             result.get("file_name", ""),
-                            result.get("file_path", ""),
                             result.get("document_type_processed", ""),
                             doc_status.get("readable", ""),
                             doc_status.get("contains_invoices", ""),
@@ -1587,14 +1570,22 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     logging.info(f"   📚 Oversized files processed with first {MAX_EXTRACTION_PAGES} pages: {oversized_processed}")
     
     # Save failed files (combine both classification and extraction failures)
+    # Filter out files that were actually successfully processed
+    successfully_processed_files = set()
+    for result in classification_results:
+        successfully_processed_files.add(result["file_path"])
+    for result in extraction_results:
+        successfully_processed_files.add(result["file_path"])
+    
     all_failed_files = failed_classification + failed_extraction
-    # Remove duplicates based on file_path
+    # Remove duplicates based on file_path and exclude successfully processed files
     seen_files = set()
     unique_failed_files = []
     for failure in all_failed_files:
-        if failure["file_path"] not in seen_files:
+        file_path = failure["file_path"]
+        if file_path not in seen_files and file_path not in successfully_processed_files:
             unique_failed_files.append(failure)
-            seen_files.add(failure["file_path"])
+            seen_files.add(file_path)
     
     if unique_failed_files:
         failed_csv_path = os.path.join(output_folder, FAILED_CSV_FILE)
@@ -1653,6 +1644,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Enhanced 2-Step PDF processing: Classification then Specialized Extraction')
     parser.add_argument('--input', default=INPUT_FOLDER,
                        help=f'Input folder containing PDF files (default: {INPUT_FOLDER})')
+    parser.add_argument('--batch', nargs='+', 
+                       help='Process multiple input folders in sequence (e.g., --batch folder1 folder2 folder3)')
     parser.add_argument('--output', default=OUTPUT_FOLDER,
                        help=f'Output folder for results (default: {OUTPUT_FOLDER})')
     parser.add_argument('--logs', default=LOGS_FOLDER,
@@ -1674,18 +1667,38 @@ if __name__ == "__main__":
     else:
         logging.info("🚀 Starting Enhanced 2-Step Pipeline with regular Gemini API")
     
-    logging.info(f"📂 Input folder: {args.input}")
+    # Handle batch processing
+    if args.batch:
+        input_folders = args.batch
+        logging.info(f"🔄 Batch mode: Processing {len(input_folders)} folders")
+    else:
+        input_folders = [args.input]
+        logging.info(f"📂 Single folder mode: {args.input}")
+    
     logging.info(f"📁 Base output folder: {args.output}")
     logging.info(f"📋 Logs folder: {args.logs}")
     logging.info(f"🗂️  Base JSON responses folder: {args.json_responses}")
     logging.info(f"🔧 Enhanced features: 7-page classification, ≤10-page extraction, separate CSVs, dynamic folders")
     
-    start_time = time.time()
-    asyncio.run(main(
-        input_folder=args.input,
-        output_folder=args.output,
-        logs_folder=args.logs,
-        json_responses_folder=args.json_responses
-    ))
-    elapsed_time = time.time() - start_time
-    logging.info(f"⏱️  Total enhanced 2-step execution time: {elapsed_time:.2f} seconds")
+    total_start_time = time.time()
+    
+    # Process each folder
+    for i, folder in enumerate(input_folders, 1):
+        logging.info(f"📁 Processing folder {i}/{len(input_folders)}: {folder}")
+        folder_start_time = time.time()
+        
+        try:
+            asyncio.run(main(
+                input_folder=folder,
+                output_folder=args.output,
+                logs_folder=args.logs,
+                json_responses_folder=args.json_responses
+            ))
+            folder_elapsed = time.time() - folder_start_time
+            logging.info(f"✅ Folder {i}/{len(input_folders)} completed in {folder_elapsed:.2f} seconds: {folder}")
+        except Exception as e:
+            folder_elapsed = time.time() - folder_start_time
+            logging.error(f"❌ Folder {i}/{len(input_folders)} failed after {folder_elapsed:.2f} seconds: {folder} - {str(e)}")
+    
+    total_elapsed = time.time() - total_start_time
+    logging.info(f"⏱️  Total batch execution time: {total_elapsed:.2f} seconds for {len(input_folders)} folders")
