@@ -113,12 +113,12 @@ def extract_first_n_pages_pdf(pdf_path: str, max_pages: int = MAX_CLASSIFICATION
             source_doc.close()
             return pdf_bytes
         
-        # Use the most efficient approach: select() method to create a new document
-        # with only the desired pages. This avoids creating an empty document and copying.
-        source_doc.select(list(range(pages_to_copy)))
-        
-        # Convert the selected document to bytes
-        pdf_bytes = source_doc.tobytes()
+        # Fastest path: create a lightweight slice without mutating the original document
+        # PyMuPDF lets us take a sub-document view via slicing. This returns a new
+        # in-memory Document containing only the requested pages.
+        sub_doc = source_doc[0:pages_to_copy]
+        pdf_bytes = sub_doc.tobytes()
+        sub_doc.close()
         source_doc.close()
         return pdf_bytes
         
