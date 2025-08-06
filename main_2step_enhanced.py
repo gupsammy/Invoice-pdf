@@ -31,6 +31,9 @@ from prompts_2step_enhanced_v2 import (
 # Import streaming CSV writer for Phase 5 optimization
 from utilities.streaming_csv import StreamingCSVWriter
 
+# Import SQLite manifest for resumable processing
+from utilities.manifest import ProcessingManifest
+
 # ===========================
 # ENHANCED CONFIGURATION CONSTANTS
 # ===========================
@@ -92,6 +95,10 @@ if not API_KEY:
 # Module-level PDF file descriptor semaphore (Phase 4 optimization)
 # Will be initialized in main()
 pdf_fd_semaphore = None
+
+# Module-level processing manifest for resumable operations
+# Will be initialized in main()
+processing_manifest = None
 
 def chunker(seq, n):
     """
@@ -226,6 +233,16 @@ async def classify_document_async(
     """
     pdf_path_obj = Path(pdf_path)
     
+    # Check manifest to see if already classified (when resume mode is active)
+    global processing_manifest
+    if processing_manifest:
+        # Get resume queues to check if this file needs classification
+        classify_list, _ = processing_manifest.get_resume_queues([pdf_path])
+        if pdf_path not in classify_list:
+            # Already classified, skip
+            logging.debug(f"[CLASSIFY] {pdf_path_obj.name} - Already classified, skipping")
+            return None
+    
     try:
         # Get total page count - catch preprocessing errors
         try:
@@ -325,10 +342,22 @@ async def classify_document_async(
                     if SAVE_RESPONSES:
                         save_classification_response()
                     
+                    # Record classification in manifest (when resume mode is active)
+                    if processing_manifest:
+                        classification = classification_data.get('classification', '')
+                        doc_type = classification_data.get('document_type', '')
+                        processing_manifest.mark_classified(pdf_path, classification, doc_type)
+                    
                     return classification_data
                     
                 except json.JSONDecodeError as jde:
-                    logging.error(f"[CLASSIFY] {pdf_path_obj.name} - JSON decode failed: {str(jde)}")
+                    error_msg = f"JSON decode failed: {str(jde)}"
+                    logging.error(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Record error in manifest (when resume mode is active)
+                    if processing_manifest:
+                        processing_manifest.mark_error(pdf_path, error_msg)
+                    
                     return None
                 except Exception as exc:
                     if attempt < _MAX_RETRIES - 1:
@@ -339,11 +368,23 @@ async def classify_document_async(
                         logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay:.1f}s...")
                         await asyncio.sleep(delay)
                         continue
-                    logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Exhausted retries: {str(exc)[:150]}")
+                    error_msg = f"Exhausted retries: {str(exc)[:150]}"
+                    logging.error(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Record error in manifest (when resume mode is active)
+                    if processing_manifest:
+                        processing_manifest.mark_error(pdf_path, error_msg)
+                    
                     return None
                     
     except Exception as e:
-        logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {str(e)[:150]}")
+        error_msg = f"Preprocessing error: {str(e)[:150]}"
+        logging.error(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
+        
+        # Record error in manifest (when resume mode is active)
+        if processing_manifest:
+            processing_manifest.mark_error(pdf_path, error_msg)
+        
         return None
 
 async def extract_document_data_async(
@@ -367,6 +408,16 @@ async def extract_document_data_async(
         Dictionary containing extracted data or None if failed
     """
     pdf_path_obj = Path(pdf_path)
+    
+    # Check manifest to see if already extracted (when resume mode is active)
+    global processing_manifest
+    if processing_manifest:
+        # Get resume queues to check if this file needs extraction
+        _, extract_list = processing_manifest.get_resume_queues([pdf_path])
+        if pdf_path not in extract_list:
+            # Already extracted, skip
+            logging.debug(f"[EXTRACT] {pdf_path_obj.name} - Already extracted, skipping")
+            return None
     
     # Check page count - only process files with ≤20 pages (or first 20 pages if >20)
     total_pages = await safe_get_pdf_page_count(pdf_path)
@@ -469,10 +520,20 @@ async def extract_document_data_async(
                     if SAVE_RESPONSES:
                         save_extraction_response()
                     
+                    # Record extraction completion in manifest (when resume mode is active)
+                    if processing_manifest:
+                        processing_manifest.mark_extracted(pdf_path)
+                    
                     return extraction_data
                     
                 except json.JSONDecodeError as jde:
-                    logging.error(f"[EXTRACT] {pdf_path_obj.name} - JSON decode failed: {str(jde)}")
+                    error_msg = f"JSON decode failed: {str(jde)}"
+                    logging.error(f"[EXTRACT] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Record error in manifest (when resume mode is active)
+                    if processing_manifest:
+                        processing_manifest.mark_error(pdf_path, error_msg)
+                    
                     return None
                 except Exception as exc:
                     if attempt < _MAX_RETRIES - 1:
@@ -483,11 +544,23 @@ async def extract_document_data_async(
                         logging.warning(f"[EXTRACT] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay:.1f}s...")
                         await asyncio.sleep(delay)
                         continue
-                    logging.error(f"[EXTRACT] {pdf_path_obj.name} - Exhausted retries: {str(exc)[:150]}")
+                    error_msg = f"Exhausted retries: {str(exc)[:150]}"
+                    logging.error(f"[EXTRACT] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Record error in manifest (when resume mode is active)
+                    if processing_manifest:
+                        processing_manifest.mark_error(pdf_path, error_msg)
+                    
                     return None
                     
     except Exception as e:
-        logging.error(f"[EXTRACT] {pdf_path_obj.name} - Error: {str(e)[:150]}")
+        error_msg = f"Error: {str(e)[:150]}"
+        logging.error(f"[EXTRACT] {pdf_path_obj.name} - {error_msg}")
+        
+        # Record error in manifest (when resume mode is active)
+        if processing_manifest:
+            processing_manifest.mark_error(pdf_path, error_msg)
+        
         return None
 
 async def classify_document_with_metadata(
@@ -1778,7 +1851,7 @@ async def process_with_pipeline_overlap(
     
     return classification_results, extraction_results, failed_classification, failed_extraction
 
-async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None, resume_extraction=False):
+async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None, resume_extraction=False, resume=False):
     """
     Enhanced main 2-step processing function with improved accuracy and organization.
     Step 1: Classify documents using gemini-2.5-flash (first 7 pages)
@@ -1803,11 +1876,42 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     pdf_fd_semaphore = asyncio.Semaphore(PDF_FD_SEMAPHORE_LIMIT)
     logging.info(f"🔒 PDF file descriptor semaphore initialized (limit: {PDF_FD_SEMAPHORE_LIMIT})")
     
+    # Initialize processing manifest for resumable operations
+    global processing_manifest
+    if resume:
+        manifest_path = os.path.join(base_output_folder, "manifest.db")
+        processing_manifest = ProcessingManifest(manifest_path)
+        processing_manifest.connect()
+        logging.info(f"📋 SQLite manifest initialized for resumable processing: {manifest_path}")
+    else:
+        processing_manifest = None
+    
     # Check if setup was successful
     if not pdf_files or client is None:
         return
     
-    if resume_extraction:
+    if resume and processing_manifest:
+        # ===========================
+        # SQLITE MANIFEST RESUME MODE: USE MANIFEST TO DETERMINE RESUME QUEUES
+        # ===========================
+        logging.info("🔄 SQLite manifest resume mode: Determining files to process...")
+        
+        # Get all PDF files from the input folder
+        all_pdf_files = []
+        for root, dirs, files in os.walk(input_folder):
+            for file in files:
+                if file.lower().endswith('.pdf'):
+                    all_pdf_files.append(os.path.join(root, file))
+        
+        # Use manifest to determine what needs to be processed
+        classify_list, extract_list = processing_manifest.get_resume_queues(all_pdf_files)
+        
+        logging.info(f"📋 Resume queues: {len(classify_list)} need classification, {len(extract_list)} need extraction")
+        
+        # Set up for regular processing with filtered lists
+        pdf_files = all_pdf_files  # Will be filtered by manifest during processing
+        
+    elif resume_extraction:
         # ===========================
         # RESUME MODE: SKIP CLASSIFICATION, USE EXISTING RESULTS
         # ===========================
@@ -1822,7 +1926,10 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         
         logging.info(f"📋 Loaded {len(relevant_documents)} files for extraction from previous classification")
         
-    else:
+        # Skip to extraction logic
+        # TODO: Handle extraction with manifest
+        
+    if not resume or not processing_manifest:
         # ===========================
         # PHASE 6: CHUNKED PROCESSING WITH STREAMING CSV WRITERS
         # ===========================
@@ -2069,6 +2176,8 @@ if __name__ == "__main__":
                        help='Process multiple input folders in sequence (e.g., --batch folder1 folder2 folder3)')
     parser.add_argument('--resume-extraction', action='store_true',
                        help='Resume extraction for files that failed/missed in previous run (skips classification)')
+    parser.add_argument('--resume', action='store_true',
+                       help='Resume processing using SQLite manifest (both classification and extraction)')
     parser.add_argument('--output', default=OUTPUT_FOLDER,
                        help=f'Output folder for results (default: {OUTPUT_FOLDER})')
     parser.add_argument('--logs', default=LOGS_FOLDER,
@@ -2116,7 +2225,8 @@ if __name__ == "__main__":
                 output_folder=args.output,
                 logs_folder=args.logs,
                 json_responses_folder=args.json_responses,
-                resume_extraction=args.resume_extraction
+                resume_extraction=args.resume_extraction,
+                resume=args.resume
             ))
             folder_elapsed = time.time() - folder_start_time
             logging.info(f"✅ Folder {i}/{len(input_folders)} completed in {folder_elapsed:.2f} seconds: {folder}")
