@@ -53,62 +53,82 @@ invoice_pdf/               # new top-level package
 
 ---
 
-## 3. Migration Phases (incremental & safe)
+## 3. Migration Road-Map (incremental, test-driven)
 
-### Phase 0 ✔︎ – _Preparation_
+### Phase 0 – Safety-Net & Project Skeleton
 
-- Freeze current `develop` branch.
-- Add this `REFactor_roadmap.md`.
+- Tag current `main` as `v0-legacy-snapshot` and freeze.
+- Scaffold `invoice_pdf/` package and `pyproject.toml`.
+- Move `main_2step_enhanced.py` to `invoice_pdf/_legacy/main_2step_enhanced.py` **without editing a single line**.
+- Add `tests/test_regression_fixture.py` (golden-file snapshot for ≤5 tiny PDFs).
+- Install `pre-commit` with `ruff`, `black`, `isort`, `mypy`, `reuse`.
+- Create basic GitHub Actions workflow: lint ➜ type-check ➜ pytest.
+- Add `Makefile` / `justfile` with `run`, `test`, `fmt` shortcuts.
 
-### Phase 1 – _Introduce typed models_
+### Phase 1 – Typed Configuration
 
-1. Create `invoice_pdf/core/models.py` using `pydantic`.
-2. Wrap existing dicts (`classification_data`, `extraction_data`, failure dict) into models.
-3. Update `classify_document_async` & `extract_document_data_async` to return model instances (`.dict()` for callers).
-4. Add `tests/test_models.py` verifying JSON-round-trip.
+- Implement `invoice_pdf/config.py` (`Settings` dataclass, pydantic v2).
+- Create `invoice_pdf/logging_config.py` with a reusable `dictConfig`.
+- Patch `_legacy/main_2step_enhanced.py` to instantiate a `Settings` object instead of reading `os.environ` directly (mechanical replace, **no logic change**).
 
-### Phase 2 – _Extract PDF helpers_
+### Phase 2 – Canonical Data-Models
 
-- Move `get_pdf_page_count`, `extract_first_n_pages_pdf`, semaphore logic into `core/pdf_utils.py`.
-- Replace direct imports in code.
-- Unit-test with fake PDFs.
+- Add `invoice_pdf/core/models.py` (pydantic v2).
+- Wrap existing payloads (`classification_data`, `extraction_data`, preprocessing failure) in models.
+- Update `_legacy` classify / extract functions to return models.
+- Add `tests/test_models.py` to assert JSON round-trip and backwards compatibility.
 
-### Phase 3 – _Move Manifest & StreamingCSV_
+### Phase 3 – Shared Concurrency & Rate-Limiting
 
-- Physically move `utilities/manifest.py` → `io/manifest.py` (update imports).
-- Same for `utilities/streaming_csv.py` → `io/csv_stream.py`.
-- No behavioural change expected; run tests.
+- Create `invoice_pdf/core/rate_limit.py` with `async retry_with_backoff` + `CapacityLimiter` wrapper.
+- Remove bespoke retry loops from `_legacy` classify / extract and delegate to helper.
+- Replace raw `asyncio.Semaphore` with `anyio.CapacityLimiter`.
 
-### Phase 4 – _Split Output Generators_
+### Phase 4 – Pure PDF Helpers
 
-- Convert `save_vendor_extraction_results_to_csv`, `save_employee…`, etc. into classes under `io/`.
-- Public interface: `writer.write(result: VendorExtraction)`.
-- Migrate calls in main flow.
+- Implement `invoice_pdf/core/pdf_utils.py` (`get_page_count`, `extract_first_n_pages`).
+- Migrate calls in `_legacy`.
+- Unit-test with tiny fixture PDFs.
 
-### Phase 5 – _Create `core/pipeline.py`_
+### Phase 5 – Persistence Layer Early
 
-- Extract **pure** orchestration logic:
-  - pipeline overlap (queues), retry wrapper.
-  - Accept `Iterable[Path]`, return `AsyncIterator[Result]`.
-- Remove logging & disk writes – caller handles.
+- Move `utilities/manifest.py` → `invoice_pdf/io/manifest.py`.
+- Move `utilities/streaming_csv.py` → `invoice_pdf/io/csv_stream.py`.
+- Provide shim import in `_legacy` to avoid mass rename diff.
+- Add migration tests verifying resume works.
 
-### Phase 6 – _Rewrite CLI Layer_
+### Phase 6 – Output Writers
 
-- `cli.py` now:
-  1. Parses CLI & env via `config.Settings`.
-  2. Discovers PDFs.
-  3. Instantiates writers & manifest.
-  4. Runs `async run_pipeline()`; streams results to writers.
-  5. Drives TUI (optional).
+- Convert CSV helpers into writer classes (`ClassificationCSVWriter`, `VendorCSVWriter`, `EmployeeCSVWriter`) placed in `invoice_pdf/io`.
+- Each writer exposes `header: list[str]` and `.write(result)` API.
+- Adjust Excel / summary builders to consume headers dynamically.
 
-### Phase 7 – _Delete legacy modules_
+### Phase 7 – Core Pipeline
 
-- Remove `main_2step_enhanced.py` and `utilities/tui.py` once feature parity is confirmed.
+- `invoice_pdf/core/pipeline.py`
+  - Accepts `Iterable[Path]`, yields `Result` models.
+  - Uses classify / extract coroutines and `rate_limit`.
+  - 100 % side-effect-free.
 
-### Phase 8 – _Refinement & Docs_
+### Phase 8 – TUI & CLI Rewrite
 
-- Add README diagrams & examples.
-- CI pipeline: flake8 + pytest.
+- Port `utilities/tui.py` to `invoice_pdf/tui/monitor.py` (Rich).
+- Implement `invoice_pdf/cli.py`:
+  1. Parse CLI & env via `config.Settings`.
+  2. Discover PDFs.
+  3. Instantiate writers & manifest.
+  4. Run `async pipeline.run()`; stream results to writers and TUI.
+
+### Phase 9 – Delete Legacy Code
+
+- Delete `invoice_pdf/_legacy` after golden-file regression passes.
+- Remove transitional shims.
+
+### Phase 10 – Docs, Benchmarks & Polish
+
+- Add architecture diagram, API reference, and How-To examples to README.
+- Add `scripts/benchmark.py`; ensure no performance regression.
+- Final CI matrix (Python 3.10-3.12, macOS + Ubuntu).
 
 ---
 
