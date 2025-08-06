@@ -11,4 +11,6 @@ __pycache__/
 /archive*/
 .claude
 CLAUDE.md
+.pytest_cache/
 
+_pycache_/

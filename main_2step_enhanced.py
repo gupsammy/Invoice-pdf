@@ -1278,7 +1278,7 @@ def read_csv_into_rows(file_path: str) -> List[List]:
     return rows
 
 
-def create_excel_from_csvs(output_folder: str, input_folder_name: str):
+def create_excel_from_streamed_csvs(output_folder: str, input_folder_name: str):
     """Create an Excel workbook directly from the three streamed CSV files (chunked mode)."""
     import openpyxl
     csv_mapping = {
@@ -2365,7 +2365,12 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
             if r.get("classification") in ["employee_t&e", "vendor_invoice"]
         ]
         
-        logging.info(f"💎 Pipeline Processing Complete - {len(extraction_results)} documents extracted")
+        # Adjust logging based on processing mode (chunked vs. non-chunked)
+        if classification_results:
+            logging.info(f"💎 Pipeline Processing Complete - {len(extraction_results)} documents extracted")
+        else:
+            extracted_for_log = total_extracted if 'total_extracted' in locals() else len(extraction_results)
+            logging.info(f"💎 Pipeline Processing Complete - {extracted_for_log} documents extracted")
         logging.info(f"⚡ Processing Statistics:")
         logging.info(f"   📋 Irrelevant documents skipped: {skipped_irrelevant}")
         logging.info(f"   💥 Processing failed documents skipped: {skipped_processing_failed}")
@@ -2522,7 +2527,7 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         )
         # Also generate an Excel workbook from streamed CSVs
         logging.info("📊 Creating Excel workbook from streamed CSVs (chunked mode)...")
-        create_excel_from_csvs(output_folder, input_folder_name)
+        create_excel_from_streamed_csvs(output_folder, input_folder_name)
     
     logging.info(f"📊 Enhanced results saved to {output_folder}/")
     logging.info(f"   - Classification: {CLASSIFICATION_CSV_FILE}")
