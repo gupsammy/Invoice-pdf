@@ -3,11 +3,19 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic_settings import BaseSettings
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     """Centralized configuration for Invoice PDF processing."""
+    
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"
+    )
     
     # API Configuration
     gemini_api_key: str = Field(..., description="Gemini API key for document processing")
@@ -37,33 +45,29 @@ class Settings(BaseModel):
     input_directory: Optional[Path] = Field(default=None, description="Input directory containing PDFs")
     output_directory: Optional[Path] = Field(default=None, description="Output directory for results")
     
-    @validator('gemini_api_key')
+    @field_validator('gemini_api_key')
+    @classmethod
     def api_key_must_not_be_empty(cls, v):
         """Ensure API key is provided."""
         if not v or v.strip() == "":
             raise ValueError("GEMINI_API_KEY must be provided")
         return v
     
-    @validator('use_vertex_ai', pre=True)
+    @field_validator('use_vertex_ai', mode='before')
+    @classmethod
     def parse_vertex_ai_flag(cls, v):
         """Parse vertex AI flag from string."""
         if isinstance(v, str):
             return v.lower() == "true"
         return v
     
-    @validator('debug_responses', pre=True)
+    @field_validator('debug_responses', mode='before')
+    @classmethod
     def parse_debug_flag(cls, v):
         """Parse debug flag from string."""
         if isinstance(v, str):
             return v == "1" or v.lower() == "true"
         return v
-    
-    class Config:
-        """Pydantic configuration."""
-        env_prefix = ""  # No prefix for environment variables
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
     
     @classmethod
     def from_env(cls) -> "Settings":
