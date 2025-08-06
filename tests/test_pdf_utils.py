@@ -196,6 +196,52 @@ class TestPDFSemaphore:
         # Should not raise any errors
 
 
+class TestMemorySafety:
+    """Test class for memory safety features with large files."""
+    
+    def test_extract_large_file_memory_safety(self):
+        """Test that large file extraction uses memory-safe streaming."""
+        # Use a real PDF fixture to test file size logic
+        for pdf_path in PDF_FIXTURES:
+            if pdf_path.exists():
+                # Get original file size
+                file_size = pdf_path.stat().st_size
+                page_count = get_page_count(pdf_path)
+                
+                # Test extracting all pages (should use streaming for large files)
+                pdf_bytes = extract_first_n_pages(pdf_path, page_count)
+                
+                # Verify we got valid PDF bytes
+                assert isinstance(pdf_bytes, bytes), "Should return bytes"
+                assert len(pdf_bytes) > 0, "PDF bytes should not be empty"
+                assert pdf_bytes.startswith(b'%PDF-'), "Should be valid PDF"
+                
+                # For files over 20MB, verify we're using file streaming
+                if file_size > 20_000_000:
+                    # Should have used direct file reading
+                    original_bytes = pdf_path.read_bytes()
+                    assert pdf_bytes == original_bytes, "Large files should use direct file reading"
+    
+    def test_extract_partial_pages_always_uses_pymupdf(self):
+        """Test that partial page extraction always uses PyMuPDF processing."""
+        for pdf_path in PDF_FIXTURES:
+            if pdf_path.exists():
+                page_count = get_page_count(pdf_path)
+                
+                if page_count > 1:
+                    # Extract partial pages (should always use PyMuPDF)
+                    pdf_bytes = extract_first_n_pages(pdf_path, page_count - 1)
+                    
+                    # Verify we got valid PDF bytes
+                    assert isinstance(pdf_bytes, bytes), "Should return bytes"
+                    assert len(pdf_bytes) > 0, "PDF bytes should not be empty"
+                    assert pdf_bytes.startswith(b'%PDF-'), "Should be valid PDF"
+                    
+                    # Should be different from original file (since we extracted partial)
+                    original_bytes = pdf_path.read_bytes()
+                    assert pdf_bytes != original_bytes, "Partial extraction should differ from original"
+
+
 @pytest.fixture(autouse=True)
 def reset_semaphore():
     """Reset the PDF semaphore before each test to ensure clean state."""

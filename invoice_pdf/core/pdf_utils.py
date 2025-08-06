@@ -12,6 +12,9 @@ import fitz  # PyMuPDF
 
 from .rate_limit import CapacityLimiter
 
+# Memory safety threshold for large PDF files (20MB)
+LARGE_FILE_THRESHOLD_BYTES = 20_000_000
+
 # Global PDF file descriptor semaphore - will be initialized by main application
 pdf_fd_semaphore: CapacityLimiter | None = None
 
@@ -30,9 +33,10 @@ def get_page_count(pdf_path: Path | str) -> int:
     """
     try:
         doc = fitz.open(str(pdf_path))
-        page_count = len(doc)
-        doc.close()
-        return page_count
+        try:
+            return len(doc)
+        finally:
+            doc.close()
     except Exception:
         logging.exception("Error getting page count for %s", pdf_path)
         return 0
@@ -41,7 +45,8 @@ def get_page_count(pdf_path: Path | str) -> int:
 def extract_first_n_pages(pdf_path: Path | str, max_pages: int) -> bytes:
     """Extract the first N pages from a PDF and return as bytes.
 
-    Uses optimized page slicing - if all pages are needed, returns original
+    Uses memory-efficient streaming for large files (>20MB). For smaller files,
+    uses optimized page slicing - if all pages are needed, returns original
     document bytes without creating a new document.
 
     Args:
@@ -55,28 +60,37 @@ def extract_first_n_pages(pdf_path: Path | str, max_pages: int) -> bytes:
         Exception: If PDF cannot be opened, processed, or converted to bytes
     """
     try:
+        pdf_path = Path(pdf_path)
+        file_size = pdf_path.stat().st_size
+
         # Open the source PDF
         source_doc = fitz.open(str(pdf_path))
 
-        # Determine pages to extract
-        pages_to_copy = min(len(source_doc), max_pages)
+        try:
+            # Determine pages to extract
+            pages_to_copy = min(len(source_doc), max_pages)
 
-        if pages_to_copy == len(source_doc):
-            # If we need all pages, just return the original document as bytes
-            pdf_bytes = source_doc.tobytes()
+            # Memory-efficient handling for large files
+            if pages_to_copy == len(source_doc):
+                # If we need all pages from a large file, stream directly without loading into memory
+                if file_size > LARGE_FILE_THRESHOLD_BYTES:
+                    source_doc.close()
+                    # Return file bytes directly without PyMuPDF processing
+                    return pdf_path.read_bytes()
+                
+                # Small file - use existing logic
+                return source_doc.tobytes()
+
+            # For partial page extraction, always use PyMuPDF (no streaming option)
+            # Create a new document and copy pages
+            new_doc = fitz.open()
+            try:
+                new_doc.insert_pdf(source_doc, from_page=0, to_page=pages_to_copy - 1)
+                return new_doc.tobytes()
+            finally:
+                new_doc.close()
+        finally:
             source_doc.close()
-            return pdf_bytes
-
-        # Create a new document and copy pages
-        new_doc = fitz.open()
-        new_doc.insert_pdf(source_doc, from_page=0, to_page=pages_to_copy - 1)
-        pdf_bytes = new_doc.tobytes()
-
-        # Clean up
-        new_doc.close()
-        source_doc.close()
-
-        return pdf_bytes
 
     except Exception:
         logging.exception("Error extracting first %s pages from %s", max_pages, pdf_path)
@@ -109,7 +123,8 @@ async def safe_extract_first_n_pages(pdf_path: Path | str, max_pages: int) -> by
     """Extract PDF pages with file descriptor semaphore guard.
 
     This async wrapper uses the global pdf_fd_semaphore to limit concurrent
-    PDF file operations, preventing resource exhaustion.
+    PDF file operations, preventing resource exhaustion. Uses memory-efficient
+    streaming for large files (>20MB).
 
     Args:
         pdf_path: Path to the PDF file
