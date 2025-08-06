@@ -3465,4 +3465,531 @@
 Processing 500 files - Classification:  56%|█████▌    | 278/500 [06:59<04:55,  1.33s/file, ✅ PO -SIMON H STEINER,DT.9.12.2014.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  56%|█████▌    | 279/500 [06:59<04:32,  1.23s/file, ✅ PO -SIMON H STEINER,DT.9.12.2014.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:18,087 - INFO - [CLASSIFY] Instruction_Kit_eForm_CRA-2_v0.4_cust_1745346377.pdf - Success: irrelevant (confidence: 1.00)
 2025-08-06 22:56:18,088 - INFO - [CLASSIFY] CH_Vinod Kumar-Pay Slip-Mar17_cust_1745346480.pdf - Attempt 1/3 (Total pages: 1)
 2025-08-06 22:56:18,088 - INFO - AFC is enabled with max remote calls: 10.
-Processing 500 files - Classification:  56%|█████▌    | 279/500 [07:00<04:32,  1.23s/file, ✅ Instruction_Kit_eForm_CRA-2_v0.4_cust_1745346377.pdf (irrelevant, 1.00, 16p)]Processing 500 files - Classification:  56%|█████▌    | 280/500 [07:00<04:54,  1.34s/file, ✅ Instruction_Kit_eForm_CRA-2_v0.4_cust_1745346377.pdf (irrelevant, 1.00, 16p)]
+Processing 500 files - Classification:  56%|█████▌    | 279/500 [07:00<04:32,  1.23s/file, ✅ Instruction_Kit_eForm_CRA-2_v0.4_cust_1745346377.pdf (irrelevant, 1.00, 16p)]Processing 500 files - Classification:  56%|█████▌    | 280/500 [07:00<04:54,  1.34s/file, ✅ Instruction_Kit_eForm_CRA-2_v0.4_cust_1745346377.pdf (irrelevant, 1.00, 16p)]2025-08-06 22:56:22,341 - INFO - [CLASSIFY] 030-17_cust_1745346447.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:22,341 - INFO - [CLASSIFY] 0580208.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:22,341 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  56%|█████▌    | 280/500 [07:04<04:54,  1.34s/file, ✅ 030-17_cust_1745346447.pdf (vendor_invoice, 1.00, 1p)]                       Processing 500 files - Classification:  56%|█████▌    | 281/500 [07:04<07:54,  2.17s/file, ✅ 030-17_cust_1745346447.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:23,853 - INFO - [CLASSIFY] 538_A_cust_1745346354.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:56:23,853 - INFO - [CLASSIFY] Financials- for print.pdf - Attempt 1/3 (Total pages: 17)
+2025-08-06 22:56:23,854 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  56%|█████▌    | 281/500 [07:06<07:54,  2.17s/file, ✅ 538_A_cust_1745346354.pdf (vendor_invoice, 0.95, 18p)]Processing 500 files - Classification:  56%|█████▋    | 282/500 [07:06<07:11,  1.98s/file, ✅ 538_A_cust_1745346354.pdf (vendor_invoice, 0.95, 18p)]2025-08-06 22:56:25,661 - INFO - [CLASSIFY] CrownLedger_cust_1745346525.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:56:25,661 - INFO - [CLASSIFY] 9946140588.PDF - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:25,662 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  56%|█████▋    | 282/500 [07:08<07:11,  1.98s/file, ✅ CrownLedger_cust_1745346525.pdf (vendor_invoice, 0.95, 3p)]Processing 500 files - Classification:  57%|█████▋    | 283/500 [07:08<06:58,  1.93s/file, ✅ CrownLedger_cust_1745346525.pdf (vendor_invoice, 0.95, 3p)]2025-08-06 22:56:27,854 - INFO - [CLASSIFY] CH_Vinod Kumar-Pay Slip-Mar17_cust_1745346480.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:27,855 - INFO - [CLASSIFY] Pre Carriage Invoice Hoegaarden 13608 cases 2500015406.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:27,855 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  57%|█████▋    | 283/500 [07:10<06:58,  1.93s/file, ✅ CH_Vinod Kumar-Pay Slip-Mar17_cust_1745346480.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  57%|█████▋    | 284/500 [07:10<07:13,  2.01s/file, ✅ CH_Vinod Kumar-Pay Slip-Mar17_cust_1745346480.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:56:28,022 - INFO - [CLASSIFY] BOA_15 March_cust_1745346422.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:28,022 - INFO - [CLASSIFY] 030-17_cust_1745346445.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:28,023 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  57%|█████▋    | 284/500 [07:10<07:13,  2.01s/file, ✅ BOA_15 March_cust_1745346422.pdf (irrelevant, 1.00, 1p)]                 Processing 500 files - Classification:  57%|█████▋    | 285/500 [07:10<05:14,  1.46s/file, ✅ BOA_15 March_cust_1745346422.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:56:28,157 - INFO - [CLASSIFY] Invoice 031_cust_1745346451.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:28,158 - INFO - [CLASSIFY] BOA_15 March.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:28,158 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  57%|█████▋    | 285/500 [07:10<05:14,  1.46s/file, ✅ Invoice 031_cust_1745346451.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  57%|█████▋    | 286/500 [07:10<03:48,  1.07s/file, ✅ Invoice 031_cust_1745346451.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:28,778 - INFO - [CLASSIFY] Rajjan Lal Yadav - UP Godown(PIL)_cust_1745346420.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:28,778 - INFO - [CLASSIFY] REP Letter_Q1_2015_cust_1745346378.pdf - Attempt 1/3 (Total pages: 14)
+2025-08-06 22:56:28,779 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  57%|█████▋    | 286/500 [07:11<03:48,  1.07s/file, ✅ Rajjan Lal Yadav - UP Godown(PIL)_cust_1745346420.pdf (irrelevant, 1.00, 7p)]Processing 500 files - Classification:  57%|█████▋    | 287/500 [07:11<03:19,  1.07file/s, ✅ Rajjan Lal Yadav - UP Godown(PIL)_cust_1745346420.pdf (irrelevant, 1.00, 7p)]2025-08-06 22:56:33,781 - INFO - [CLASSIFY] 0580208.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:56:33,782 - INFO - [CLASSIFY] 0664_001.pdf - Attempt 1/3 (Total pages: 9)
+2025-08-06 22:56:33,782 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  57%|█████▋    | 287/500 [07:16<03:19,  1.07file/s, ✅ 0580208.pdf (vendor_invoice, 0.95, 1p)]                                      Processing 500 files - Classification:  58%|█████▊    | 288/500 [07:16<07:36,  2.15s/file, ✅ 0580208.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:56:34,450 - INFO - [CLASSIFY] R Premkumar - Malkapur_cust_1745346429.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:34,451 - INFO - [CLASSIFY] BNP_AbInveb_Final Document on BNPP India Transactional Banking July 17 2015_cust_1745346351.pdf - Attempt 1/3 (Total pages: 99)
+2025-08-06 22:56:34,452 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  58%|█████▊    | 288/500 [07:17<07:36,  2.15s/file, ✅ R Premkumar - Malkapur_cust_1745346429.pdf (irrelevant, 1.00, 6p)]Processing 500 files - Classification:  58%|█████▊    | 289/500 [07:17<06:00,  1.71s/file, ✅ R Premkumar - Malkapur_cust_1745346429.pdf (irrelevant, 1.00, 6p)]2025-08-06 22:56:37,806 - INFO - [CLASSIFY] Financials- for print.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:37,807 - INFO - [CLASSIFY] V Srinivasa Rao_F&F_cust_1745346472.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:37,807 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  58%|█████▊    | 289/500 [07:20<06:00,  1.71s/file, ✅ Financials- for print.pdf (irrelevant, 1.00, 17p)]                Processing 500 files - Classification:  58%|█████▊    | 290/500 [07:20<07:41,  2.20s/file, ✅ Financials- for print.pdf (irrelevant, 1.00, 17p)]2025-08-06 22:56:39,093 - INFO - [CLASSIFY] REPRESENTATION LETTER_cust_1745346377.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:39,094 - INFO - [CLASSIFY] GLS Demand letter_cust_1745346393.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:39,094 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  58%|█████▊    | 290/500 [07:21<07:41,  2.20s/file, ✅ REPRESENTATION LETTER_cust_1745346377.pdf (irrelevant, 1.00, 14p)]Processing 500 files - Classification:  58%|█████▊    | 291/500 [07:21<06:42,  1.93s/file, ✅ REPRESENTATION LETTER_cust_1745346377.pdf (irrelevant, 1.00, 14p)]2025-08-06 22:56:39,295 - INFO - [CLASSIFY] BOA_15 March.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:56:39,295 - INFO - [CLASSIFY] 2651_001.pdf - Attempt 1/3 (Total pages: 31)
+2025-08-06 22:56:39,296 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  58%|█████▊    | 291/500 [07:21<06:42,  1.93s/file, ✅ BOA_15 March.pdf (irrelevant, 0.95, 1p)]                          Processing 500 files - Classification:  58%|█████▊    | 292/500 [07:21<04:53,  1.41s/file, ✅ BOA_15 March.pdf (irrelevant, 0.95, 1p)]2025-08-06 22:56:39,409 - INFO - [CLASSIFY] 9946140588.PDF - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:39,409 - INFO - [CLASSIFY] 1st Jan 2016 to 28th Oct16.pdf - Attempt 1/3 (Total pages: 328)
+2025-08-06 22:56:39,409 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  58%|█████▊    | 292/500 [07:22<04:53,  1.41s/file, ✅ 9946140588.PDF (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  59%|█████▊    | 293/500 [07:22<03:31,  1.02s/file, ✅ 9946140588.PDF (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:39,574 - INFO - [CLASSIFY] 030-17_cust_1745346445.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:39,576 - INFO - [CLASSIFY] 9946059018.PDF - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:39,576 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  59%|█████▊    | 293/500 [07:22<03:31,  1.02s/file, ✅ 030-17_cust_1745346445.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  59%|█████▉    | 294/500 [07:22<02:37,  1.31file/s, ✅ 030-17_cust_1745346445.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:40,453 - INFO - [CLASSIFY] Pre Carriage Invoice Hoegaarden 13608 cases 2500015406.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:40,454 - INFO - [CLASSIFY] Invoice 386-16_cust_1745346437.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:40,454 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  59%|█████▉    | 294/500 [07:23<02:37,  1.31file/s, ✅ Pre Carriage Invoice Hoegaarden 13608 cases 2500015406.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  59%|█████▉    | 295/500 [07:23<02:44,  1.25file/s, ✅ Pre Carriage Invoice Hoegaarden 13608 cases 2500015406.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:42,150 - INFO - [CLASSIFY] Covering Letter to RBI.pdf - Success: vendor_invoice (confidence: 0.85)
+2025-08-06 22:56:42,150 - INFO - [CLASSIFY] Invoice 153-17_cust_1745346441.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:42,150 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  59%|█████▉    | 295/500 [07:24<02:44,  1.25file/s, ✅ Covering Letter to RBI.pdf (vendor_invoice, 0.85, 2p)]                                Processing 500 files - Classification:  59%|█████▉    | 296/500 [07:24<03:37,  1.07s/file, ✅ Covering Letter to RBI.pdf (vendor_invoice, 0.85, 2p)]2025-08-06 22:56:45,558 - INFO - [CLASSIFY] REP Letter_Q1_2015_cust_1745346378.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:45,559 - INFO - [CLASSIFY] Minu Menachery-Pay Slip-FFS-April 2018.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:45,560 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  59%|█████▉    | 296/500 [07:28<03:37,  1.07s/file, ✅ REP Letter_Q1_2015_cust_1745346378.pdf (irrelevant, 1.00, 14p)]Processing 500 files - Classification:  59%|█████▉    | 297/500 [07:28<05:59,  1.77s/file, ✅ REP Letter_Q1_2015_cust_1745346378.pdf (irrelevant, 1.00, 14p)]2025-08-06 22:56:48,114 - INFO - [CLASSIFY] BNP_AbInveb_Final Document on BNPP India Transactional Banking July 17 2015_cust_1745346351.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:48,116 - INFO - [CLASSIFY] CONVONIX_1193.pdf - Attempt 1/3 (Total pages: 8)
+2025-08-06 22:56:48,116 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  59%|█████▉    | 297/500 [07:30<05:59,  1.77s/file, ✅ BNP_AbInveb_Final Document on BNPP India Transactional Banking July 17 2015_cust_1745346351.pdf (irrelevant, 1.00, 99p)]Processing 500 files - Classification:  60%|█████▉    | 298/500 [07:30<06:45,  2.01s/file, ✅ BNP_AbInveb_Final Document on BNPP India Transactional Banking July 17 2015_cust_1745346351.pdf (irrelevant, 1.00, 99p)]2025-08-06 22:56:51,104 - INFO - [CLASSIFY] V Srinivasa Rao_F&F_cust_1745346472.pdf - Success: employee_t&e (confidence: 0.95)
+2025-08-06 22:56:51,105 - INFO - [CLASSIFY] Arrears Expat  _cust_1745346486.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:51,105 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  60%|█████▉    | 298/500 [07:33<06:45,  2.01s/file, ✅ V Srinivasa Rao_F&F_cust_1745346472.pdf (employee_t&e, 0.95, 1p)]                                                       Processing 500 files - Classification:  60%|█████▉    | 299/500 [07:33<07:42,  2.30s/file, ✅ V Srinivasa Rao_F&F_cust_1745346472.pdf (employee_t&e, 0.95, 1p)]2025-08-06 22:56:52,048 - INFO - [CLASSIFY] 9946059018.PDF - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:52,049 - INFO - [CLASSIFY] Aditya Prakash Mishra-Pay Slip-May 2018-FSS_cust_1745346498.PDF - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:52,049 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  60%|█████▉    | 299/500 [07:34<07:42,  2.30s/file, ✅ 9946059018.PDF (vendor_invoice, 1.00, 1p)]                       Processing 500 files - Classification:  60%|██████    | 300/500 [07:34<06:18,  1.89s/file, ✅ 9946059018.PDF (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:52,358 - INFO - [CLASSIFY] Invoice 386-16_cust_1745346437.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:52,358 - INFO - [CLASSIFY] 163_15_cust_1745346442.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:52,358 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  60%|██████    | 300/500 [07:35<06:18,  1.89s/file, ✅ Invoice 386-16_cust_1745346437.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  60%|██████    | 301/500 [07:35<04:42,  1.42s/file, ✅ Invoice 386-16_cust_1745346437.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:53,489 - INFO - [CLASSIFY] 0664_001.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:56:53,490 - INFO - [CLASSIFY] Ajit Kumar Singh_FF.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:53,490 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  60%|██████    | 301/500 [07:36<04:42,  1.42s/file, ✅ 0664_001.pdf (vendor_invoice, 0.95, 9p)]                      Processing 500 files - Classification:  60%|██████    | 302/500 [07:36<04:23,  1.33s/file, ✅ 0664_001.pdf (vendor_invoice, 0.95, 9p)]2025-08-06 22:56:53,827 - INFO - [CLASSIFY] Invoice 153-17_cust_1745346441.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:56:53,827 - INFO - [CLASSIFY] Financials- for PDF 2014 final_cust_1745346319.pdf - Attempt 1/3 (Total pages: 17)
+2025-08-06 22:56:53,828 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  60%|██████    | 302/500 [07:36<04:23,  1.33s/file, ✅ Invoice 153-17_cust_1745346441.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  61%|██████    | 303/500 [07:36<03:23,  1.03s/file, ✅ Invoice 153-17_cust_1745346441.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:56:55,199 - INFO - [CLASSIFY] Minu Menachery-Pay Slip-FFS-April 2018.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:55,200 - INFO - [CLASSIFY] Sep_16_Expat Employees.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:56:55,203 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  61%|██████    | 303/500 [07:37<03:23,  1.03s/file, ✅ Minu Menachery-Pay Slip-FFS-April 2018.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  61%|██████    | 304/500 [07:37<03:42,  1.14s/file, ✅ Minu Menachery-Pay Slip-FFS-April 2018.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:56:55,213 - INFO - [CLASSIFY] GLS Demand letter_cust_1745346393.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:56:55,213 - INFO - [CLASSIFY] PIL IEC AND PAN.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:56:55,214 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  61%|██████    | 304/500 [07:37<03:42,  1.14s/file, ✅ GLS Demand letter_cust_1745346393.pdf (vendor_invoice, 0.95, 1p)] 2025-08-06 22:56:55,533 - INFO - [CLASSIFY] 1st Jan 2016 to 28th Oct16.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:56:55,534 - INFO - [CLASSIFY] Crown Beer Ledger_cust_1745346307.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:56:55,534 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  61%|██████    | 305/500 [07:38<03:41,  1.14s/file, ✅ 1st Jan 2016 to 28th Oct16.pdf (irrelevant, 1.00, 328p)]         Processing 500 files - Classification:  61%|██████    | 306/500 [07:38<02:13,  1.45file/s, ✅ 1st Jan 2016 to 28th Oct16.pdf (irrelevant, 1.00, 328p)]2025-08-06 22:56:59,221 - INFO - [CLASSIFY] 2651_001.pdf - Success: vendor_invoice (confidence: 0.98)
+2025-08-06 22:56:59,222 - INFO - [CLASSIFY] Audited Finanacials Dec-11.pdf - Attempt 1/3 (Total pages: 25)
+2025-08-06 22:56:59,222 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  61%|██████    | 306/500 [07:41<02:13,  1.45file/s, ✅ 2651_001.pdf (vendor_invoice, 0.98, 31p)]               Processing 500 files - Classification:  61%|██████▏   | 307/500 [07:41<04:36,  1.43s/file, ✅ 2651_001.pdf (vendor_invoice, 0.98, 31p)]2025-08-06 22:57:03,720 - INFO - [CLASSIFY] Aditya Prakash Mishra-Pay Slip-May 2018-FSS_cust_1745346498.PDF - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:03,721 - INFO - [CLASSIFY] 389_C_cust_1745346354.pdf - Attempt 1/3 (Total pages: 4)
+2025-08-06 22:57:03,721 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  61%|██████▏   | 307/500 [07:46<04:36,  1.43s/file, ✅ Aditya Prakash Mishra-Pay Slip-May 2018-FSS_cust_1745346498.PDF (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  62%|██████▏   | 308/500 [07:46<07:09,  2.24s/file, ✅ Aditya Prakash Mishra-Pay Slip-May 2018-FSS_cust_1745346498.PDF (irrelevant, 1.00, 1p)]2025-08-06 22:57:04,743 - INFO - [CLASSIFY] 163_15_cust_1745346442.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:04,744 - INFO - [CLASSIFY] Ramachandra Reddy-Pay Slip-Mar17_cust_1745346306.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:04,744 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  62%|██████▏   | 308/500 [07:47<07:09,  2.24s/file, ✅ 163_15_cust_1745346442.pdf (vendor_invoice, 1.00, 1p)]                                 Processing 500 files - Classification:  62%|██████▏   | 309/500 [07:47<06:03,  1.90s/file, ✅ 163_15_cust_1745346442.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:57:04,833 - INFO - [CLASSIFY] Ajit Kumar Singh_FF.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:57:04,834 - INFO - [CLASSIFY] N-CB2015034-03.pdf - Attempt 1/3 (Total pages: 10)
+2025-08-06 22:57:04,834 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  62%|██████▏   | 309/500 [07:47<06:03,  1.90s/file, ✅ Ajit Kumar Singh_FF.pdf (irrelevant, 0.95, 1p)]       2025-08-06 22:57:07,246 - INFO - [CLASSIFY] Arrears Expat  _cust_1745346486.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:57:07,247 - INFO - [CLASSIFY] Invoice 473-16_cust_1745346439.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:07,247 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  62%|██████▏   | 310/500 [07:49<06:01,  1.90s/file, ✅ Arrears Expat  _cust_1745346486.pdf (vendor_invoice, 0.90, 1p)]Processing 500 files - Classification:  62%|██████▏   | 311/500 [07:49<05:06,  1.62s/file, ✅ Arrears Expat  _cust_1745346486.pdf (vendor_invoice, 0.90, 1p)]2025-08-06 22:57:08,352 - INFO - [CLASSIFY] CONVONIX_1193.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:08,353 - INFO - [CLASSIFY] E Vishwanatha_F&F.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:08,353 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  62%|██████▏   | 311/500 [07:51<05:06,  1.62s/file, ✅ CONVONIX_1193.pdf (vendor_invoice, 1.00, 8p)]                  Processing 500 files - Classification:  62%|██████▏   | 312/500 [07:51<04:41,  1.50s/file, ✅ CONVONIX_1193.pdf (vendor_invoice, 1.00, 8p)]2025-08-06 22:57:08,921 - INFO - [CLASSIFY] PIL IEC AND PAN.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:08,922 - INFO - [CLASSIFY] Haryana Godown(till dec 2016).pdf - Attempt 1/3 (Total pages: 5)
+2025-08-06 22:57:08,922 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  62%|██████▏   | 312/500 [07:51<04:41,  1.50s/file, ✅ PIL IEC AND PAN.pdf (irrelevant, 1.00, 2p)]  Processing 500 files - Classification:  63%|██████▎   | 313/500 [07:51<03:56,  1.26s/file, ✅ PIL IEC AND PAN.pdf (irrelevant, 1.00, 2p)]2025-08-06 22:57:09,947 - INFO - [CLASSIFY] Sep_16_Expat Employees.pdf - Success: irrelevant (confidence: 0.90)
+2025-08-06 22:57:09,947 - INFO - [CLASSIFY] CUSTOM DUTY 2.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:09,948 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  63%|██████▎   | 313/500 [07:52<03:56,  1.26s/file, ✅ Sep_16_Expat Employees.pdf (irrelevant, 0.90, 1p)]Processing 500 files - Classification:  63%|██████▎   | 314/500 [07:52<03:42,  1.20s/file, ✅ Sep_16_Expat Employees.pdf (irrelevant, 0.90, 1p)]2025-08-06 22:57:09,956 - INFO - [CLASSIFY] Crown Beer Ledger_cust_1745346307.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:57:09,956 - INFO - [CLASSIFY] AccountLedger_cust_1745346518.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:09,957 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  63%|██████▎   | 314/500 [07:52<03:42,  1.20s/file, ✅ Crown Beer Ledger_cust_1745346307.pdf (vendor_invoice, 0.95, 2p)]2025-08-06 22:57:10,912 - INFO - [CLASSIFY] Financials- for PDF 2014 final_cust_1745346319.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:10,913 - INFO - [CLASSIFY] Jaime De San Lazaro-Pay Slip-Mar17_cust_1745346502.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:10,913 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  63%|██████▎   | 315/500 [07:53<03:41,  1.20s/file, ✅ Financials- for PDF 2014 final_cust_1745346319.pdf (irrelevant, 1.00, 17p)]Processing 500 files - Classification:  63%|██████▎   | 316/500 [07:53<02:43,  1.12file/s, ✅ Financials- for PDF 2014 final_cust_1745346319.pdf (irrelevant, 1.00, 17p)]2025-08-06 22:57:14,756 - WARNING - [CLASSIFY] Audited Finanacials Dec-11.pdf - JSON malformed, attempting repair: Expecting ',' delimiter: line 11 column 4 (char 253)
+2025-08-06 22:57:14,757 - ERROR - [CLASSIFY] Audited Finanacials Dec-11.pdf - JSON repair failed
+2025-08-06 22:57:14,759 - ERROR - [CLASSIFY] Audited Finanacials Dec-11.pdf - JSON decode failed: Expecting ',' delimiter: line 11 column 4 (char 253)
+2025-08-06 22:57:14,759 - INFO - [CLASSIFY] Invoice 031_cust_1745346309.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:14,760 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  63%|██████▎   | 316/500 [07:57<02:43,  1.12file/s, ❌ Audited Finanacials Dec-11.pdf]                                            2025-08-06 22:57:14,764 - WARNING - [CLASSIFICATION FAILED] Audited Finanacials Dec-11.pdf
+Processing 500 files - Classification:  63%|██████▎   | 317/500 [07:57<04:50,  1.59s/file, ❌ Audited Finanacials Dec-11.pdf]2025-08-06 22:57:17,009 - INFO - [CLASSIFY] Ramachandra Reddy-Pay Slip-Mar17_cust_1745346306.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:17,010 - INFO - [CLASSIFY] ACKNOLEDGMENT LETTER 1512_cust_1745346377.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:17,010 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  63%|██████▎   | 317/500 [07:59<04:50,  1.59s/file, ✅ Ramachandra Reddy-Pay Slip-Mar17_cust_1745346306.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  64%|██████▎   | 318/500 [07:59<05:19,  1.75s/file, ✅ Ramachandra Reddy-Pay Slip-Mar17_cust_1745346306.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:57:21,004 - INFO - [CLASSIFY] Invoice 473-16_cust_1745346439.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:21,004 - INFO - [CLASSIFY] 090-18.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:21,005 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  64%|██████▎   | 318/500 [08:03<05:19,  1.75s/file, ✅ Invoice 473-16_cust_1745346439.pdf (vendor_invoice, 1.00, 1p)]              Processing 500 files - Classification:  64%|██████▍   | 319/500 [08:03<07:04,  2.35s/file, ✅ Invoice 473-16_cust_1745346439.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:57:21,323 - INFO - [CLASSIFY] 389_C_cust_1745346354.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:57:21,324 - INFO - [CLASSIFY] 4186_001_cust_1745346321.pdf - Attempt 1/3 (Total pages: 11)
+2025-08-06 22:57:21,324 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  64%|██████▍   | 319/500 [08:03<07:04,  2.35s/file, ✅ 389_C_cust_1745346354.pdf (vendor_invoice, 0.95, 4p)]         Processing 500 files - Classification:  64%|██████▍   | 320/500 [08:03<05:22,  1.79s/file, ✅ 389_C_cust_1745346354.pdf (vendor_invoice, 0.95, 4p)]2025-08-06 22:57:21,821 - INFO - [CLASSIFY] Jaime De San Lazaro-Pay Slip-Mar17_cust_1745346502.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:21,821 - INFO - [CLASSIFY] MC Arvind Kumar-Pay Slip-Apr17_cust_1745346504.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:21,822 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  64%|██████▍   | 320/500 [08:04<05:22,  1.79s/file, ✅ Jaime De San Lazaro-Pay Slip-Mar17_cust_1745346502.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  64%|██████▍   | 321/500 [08:04<04:15,  1.43s/file, ✅ Jaime De San Lazaro-Pay Slip-Mar17_cust_1745346502.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:57:21,998 - INFO - [CLASSIFY] E Vishwanatha_F&F.pdf - Success: irrelevant (confidence: 0.90)
+2025-08-06 22:57:21,998 - INFO - [CLASSIFY] 68470.pdf - Attempt 1/3 (Total pages: 8)
+2025-08-06 22:57:21,998 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  64%|██████▍   | 321/500 [08:04<04:15,  1.43s/file, ✅ E Vishwanatha_F&F.pdf (irrelevant, 0.90, 1p)]                                 Processing 500 files - Classification:  64%|██████▍   | 322/500 [08:04<03:10,  1.07s/file, ✅ E Vishwanatha_F&F.pdf (irrelevant, 0.90, 1p)]2025-08-06 22:57:22,465 - INFO - [CLASSIFY] CUSTOM DUTY 2.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:57:22,466 - INFO - [CLASSIFY] Invoice 153-17.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:22,466 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  64%|██████▍   | 322/500 [08:05<03:10,  1.07s/file, ✅ CUSTOM DUTY 2.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  65%|██████▍   | 323/500 [08:05<02:38,  1.12file/s, ✅ CUSTOM DUTY 2.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:57:25,918 - INFO - [CLASSIFY] AccountLedger_cust_1745346518.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:57:25,919 - INFO - [CLASSIFY] D&O_cust_1745346354.pdf - Attempt 1/3 (Total pages: 45)
+2025-08-06 22:57:25,919 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  65%|██████▍   | 323/500 [08:08<02:38,  1.12file/s, ✅ AccountLedger_cust_1745346518.pdf (vendor_invoice, 0.90, 1p)]Processing 500 files - Classification:  65%|██████▍   | 324/500 [08:08<04:49,  1.65s/file, ✅ AccountLedger_cust_1745346518.pdf (vendor_invoice, 0.90, 1p)]2025-08-06 22:57:26,728 - INFO - [CLASSIFY] N-CB2015034-03.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:26,728 - INFO - [CLASSIFY] PrivilegeLedger_cust_1745346525.pdf - Attempt 1/3 (Total pages: 3)
+2025-08-06 22:57:26,728 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  65%|██████▍   | 324/500 [08:09<04:49,  1.65s/file, ✅ N-CB2015034-03.pdf (vendor_invoice, 1.00, 10p)]              Processing 500 files - Classification:  65%|██████▌   | 325/500 [08:09<04:04,  1.40s/file, ✅ N-CB2015034-03.pdf (vendor_invoice, 1.00, 10p)]2025-08-06 22:57:26,867 - WARNING - [CLASSIFY] ACKNOLEDGMENT LETTER 1512_cust_1745346377.pdf - JSON malformed, attempting repair: Expecting ',' delimiter: line 13 column 4 (char 425)
+2025-08-06 22:57:26,867 - ERROR - [CLASSIFY] ACKNOLEDGMENT LETTER 1512_cust_1745346377.pdf - JSON repair failed
+2025-08-06 22:57:26,868 - ERROR - [CLASSIFY] ACKNOLEDGMENT LETTER 1512_cust_1745346377.pdf - JSON decode failed: Expecting ',' delimiter: line 13 column 4 (char 425)
+2025-08-06 22:57:26,868 - INFO - [CLASSIFY] Radha Krishna-Pay Slip-Mar17.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:26,869 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  65%|██████▌   | 325/500 [08:09<04:04,  1.40s/file, ❌ ACKNOLEDGMENT LETTER 1512_cust_1745346377.pdf] 2025-08-06 22:57:26,874 - WARNING - [CLASSIFICATION FAILED] ACKNOLEDGMENT LETTER 1512_cust_1745346377.pdf
+Processing 500 files - Classification:  65%|██████▌   | 326/500 [08:09<02:58,  1.02s/file, ❌ ACKNOLEDGMENT LETTER 1512_cust_1745346377.pdf]2025-08-06 22:57:27,032 - INFO - [CLASSIFY] Invoice 031_cust_1745346309.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:27,032 - INFO - [CLASSIFY] Oct-12 to Mar-13.pdf - Attempt 1/3 (Total pages: 77)
+2025-08-06 22:57:27,032 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  65%|██████▌   | 326/500 [08:09<02:58,  1.02s/file, ✅ Invoice 031_cust_1745346309.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  65%|██████▌   | 327/500 [08:09<02:12,  1.30file/s, ✅ Invoice 031_cust_1745346309.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:57:28,332 - INFO - [CLASSIFY] Haryana Godown(till dec 2016).pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:57:28,333 - INFO - [CLASSIFY] crown beers_cust_1745346312.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:57:28,333 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  65%|██████▌   | 327/500 [08:10<02:12,  1.30file/s, ✅ Haryana Godown(till dec 2016).pdf (irrelevant, 0.95, 5p)]  Processing 500 files - Classification:  66%|██████▌   | 328/500 [08:10<02:39,  1.08file/s, ✅ Haryana Godown(till dec 2016).pdf (irrelevant, 0.95, 5p)]2025-08-06 22:57:33,717 - INFO - [CLASSIFY] MC Arvind Kumar-Pay Slip-Apr17_cust_1745346504.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:33,718 - INFO - [CLASSIFY] 033_P_cust_1745346353.pdf - Attempt 1/3 (Total pages: 4)
+2025-08-06 22:57:33,718 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  66%|██████▌   | 328/500 [08:16<02:39,  1.08file/s, ✅ MC Arvind Kumar-Pay Slip-Apr17_cust_1745346504.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  66%|██████▌   | 329/500 [08:16<06:26,  2.26s/file, ✅ MC Arvind Kumar-Pay Slip-Apr17_cust_1745346504.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:57:34,418 - INFO - [CLASSIFY] 090-18.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:34,421 - INFO - [CLASSIFY] Financials Dec-10 with CS sign_cust_1745346379.pdf - Attempt 1/3 (Total pages: 26)
+2025-08-06 22:57:34,421 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  66%|██████▌   | 329/500 [08:17<06:26,  2.26s/file, ✅ 090-18.pdf (vendor_invoice, 1.00, 1p)]                                    Processing 500 files - Classification:  66%|██████▌   | 330/500 [08:17<05:05,  1.80s/file, ✅ 090-18.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:57:34,767 - INFO - [CLASSIFY] Invoice 153-17.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:57:34,768 - INFO - [CLASSIFY] UP Godown(CBPIL)_cust_1745346429.pdf - Attempt 1/3 (Total pages: 7)
+2025-08-06 22:57:34,768 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  66%|██████▌   | 330/500 [08:17<05:05,  1.80s/file, ✅ Invoice 153-17.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  66%|██████▌   | 331/500 [08:17<03:50,  1.36s/file, ✅ Invoice 153-17.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:57:37,068 - INFO - [CLASSIFY] Radha Krishna-Pay Slip-Mar17.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:37,069 - INFO - [CLASSIFY] 68464.pdf - Attempt 1/3 (Total pages: 7)
+2025-08-06 22:57:37,070 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  66%|██████▌   | 331/500 [08:19<03:50,  1.36s/file, ✅ Radha Krishna-Pay Slip-Mar17.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  66%|██████▋   | 332/500 [08:19<04:36,  1.64s/file, ✅ Radha Krishna-Pay Slip-Mar17.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:57:39,419 - INFO - [CLASSIFY] Oct-12 to Mar-13.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:39,419 - INFO - [CLASSIFY] 68458.pdf - Attempt 1/3 (Total pages: 3)
+2025-08-06 22:57:39,419 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  66%|██████▋   | 332/500 [08:22<04:36,  1.64s/file, ✅ Oct-12 to Mar-13.pdf (irrelevant, 1.00, 77p)]           Processing 500 files - Classification:  67%|██████▋   | 333/500 [08:22<05:09,  1.85s/file, ✅ Oct-12 to Mar-13.pdf (irrelevant, 1.00, 77p)]2025-08-06 22:57:39,881 - INFO - [CLASSIFY] PrivilegeLedger_cust_1745346525.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:57:39,882 - INFO - [CLASSIFY] Undertaking letter (2)_cust_1745346394.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:39,882 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  67%|██████▋   | 333/500 [08:22<05:09,  1.85s/file, ✅ PrivilegeLedger_cust_1745346525.pdf (vendor_invoice, 0.95, 3p)]Processing 500 files - Classification:  67%|██████▋   | 334/500 [08:22<03:58,  1.44s/file, ✅ PrivilegeLedger_cust_1745346525.pdf (vendor_invoice, 0.95, 3p)]2025-08-06 22:57:40,971 - INFO - [CLASSIFY] 68470.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:40,971 - INFO - [CLASSIFY] Invoice AB Inbev (Crown Beers India Pvt. Ltd. ) - 2015-2-416 - TP Gurgaon (21 Sep, 2015).pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:40,971 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  67%|██████▋   | 334/500 [08:23<03:58,  1.44s/file, ✅ 68470.pdf (vendor_invoice, 1.00, 8p)]                          Processing 500 files - Classification:  67%|██████▋   | 335/500 [08:23<03:39,  1.33s/file, ✅ 68470.pdf (vendor_invoice, 1.00, 8p)]2025-08-06 22:57:41,264 - INFO - [CLASSIFY] 4186_001_cust_1745346321.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:41,264 - INFO - [CLASSIFY] Advance Reporting.pdf - Attempt 1/3 (Total pages: 4)
+2025-08-06 22:57:41,264 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  67%|██████▋   | 335/500 [08:23<03:39,  1.33s/file, ✅ 4186_001_cust_1745346321.pdf (vendor_invoice, 1.00, 11p)]Processing 500 files - Classification:  67%|██████▋   | 336/500 [08:23<02:47,  1.02s/file, ✅ 4186_001_cust_1745346321.pdf (vendor_invoice, 1.00, 11p)]2025-08-06 22:57:43,391 - WARNING - [CLASSIFY] crown beers_cust_1745346312.pdf - JSON malformed, attempting repair: Expecting ',' delimiter: line 16 column 4 (char 272)
+2025-08-06 22:57:43,391 - ERROR - [CLASSIFY] crown beers_cust_1745346312.pdf - JSON repair failed
+2025-08-06 22:57:43,392 - ERROR - [CLASSIFY] crown beers_cust_1745346312.pdf - JSON decode failed: Expecting ',' delimiter: line 16 column 4 (char 272)
+2025-08-06 22:57:43,393 - INFO - [CLASSIFY] Madhu Sudan Sharma-Feb18-FFS-Pay Slip_cust_1745346494.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:43,393 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  67%|██████▋   | 336/500 [08:26<02:47,  1.02s/file, ❌ crown beers_cust_1745346312.pdf]                         2025-08-06 22:57:43,397 - WARNING - [CLASSIFICATION FAILED] crown beers_cust_1745346312.pdf
+Processing 500 files - Classification:  67%|██████▋   | 337/500 [08:26<03:40,  1.35s/file, ❌ crown beers_cust_1745346312.pdf]2025-08-06 22:57:44,469 - WARNING - [CLASSIFY] D&O_cust_1745346354.pdf - JSON malformed, attempting repair: Expecting ',' delimiter: line 15 column 3 (char 321)
+2025-08-06 22:57:44,469 - ERROR - [CLASSIFY] D&O_cust_1745346354.pdf - JSON repair failed
+2025-08-06 22:57:44,470 - ERROR - [CLASSIFY] D&O_cust_1745346354.pdf - JSON decode failed: Expecting ',' delimiter: line 15 column 3 (char 321)
+2025-08-06 22:57:44,470 - INFO - [CLASSIFY] Apr Expat.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:44,470 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  67%|██████▋   | 337/500 [08:27<03:40,  1.35s/file, ❌ D&O_cust_1745346354.pdf]        2025-08-06 22:57:44,473 - WARNING - [CLASSIFICATION FAILED] D&O_cust_1745346354.pdf
+Processing 500 files - Classification:  68%|██████▊   | 338/500 [08:27<03:25,  1.27s/file, ❌ D&O_cust_1745346354.pdf]2025-08-06 22:57:48,494 - INFO - [CLASSIFY] Invoice AB Inbev (Crown Beers India Pvt. Ltd. ) - 2015-2-416 - TP Gurgaon (21 Sep, 2015).pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:48,495 - INFO - [CLASSIFY] Invoice 26.12.16 to 31.12.16.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:48,495 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  68%|██████▊   | 338/500 [08:31<03:25,  1.27s/file, ✅ Invoice AB Inbev (Crown Beers India Pvt. Ltd. ) - 2015-2-416 - TP Gurgaon (21 Sep, 2015).pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  68%|██████▊   | 339/500 [08:31<05:37,  2.10s/file, ✅ Invoice AB Inbev (Crown Beers India Pvt. Ltd. ) - 2015-2-416 - TP Gurgaon (21 Sep, 2015).pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:57:50,630 - INFO - [CLASSIFY] Financials Dec-10 with CS sign_cust_1745346379.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:50,631 - INFO - [CLASSIFY] Invoice 073-17_cust_1745346439.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:50,631 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  68%|██████▊   | 339/500 [08:33<05:37,  2.10s/file, ✅ Financials Dec-10 with CS sign_cust_1745346379.pdf (irrelevant, 1.00, 26p)]                                             Processing 500 files - Classification:  68%|██████▊   | 340/500 [08:33<05:37,  2.11s/file, ✅ Financials Dec-10 with CS sign_cust_1745346379.pdf (irrelevant, 1.00, 26p)]2025-08-06 22:57:50,800 - INFO - [CLASSIFY] 033_P_cust_1745346353.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:57:50,801 - INFO - [CLASSIFY] FI User Manual GL and AP.pdf - Attempt 1/3 (Total pages: 120)
+2025-08-06 22:57:50,801 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  68%|██████▊   | 340/500 [08:33<05:37,  2.11s/file, ✅ 033_P_cust_1745346353.pdf (irrelevant, 0.95, 4p)]                          Processing 500 files - Classification:  68%|██████▊   | 341/500 [08:33<04:02,  1.53s/file, ✅ 033_P_cust_1745346353.pdf (irrelevant, 0.95, 4p)]2025-08-06 22:57:52,505 - INFO - [CLASSIFY] 68458.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:52,506 - INFO - [CLASSIFY] Vilas Ansane-Pay Slip-Apr17_cust_1745346504.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:52,506 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  68%|██████▊   | 341/500 [08:35<04:02,  1.53s/file, ✅ 68458.pdf (vendor_invoice, 1.00, 3p)]            Processing 500 files - Classification:  68%|██████▊   | 342/500 [08:35<04:09,  1.58s/file, ✅ 68458.pdf (vendor_invoice, 1.00, 3p)]2025-08-06 22:57:52,663 - INFO - [CLASSIFY] Undertaking letter (2)_cust_1745346394.pdf - Success: employee_t&e (confidence: 0.95)
+2025-08-06 22:57:52,663 - INFO - [CLASSIFY] 35993.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:52,664 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  68%|██████▊   | 342/500 [08:35<04:09,  1.58s/file, ✅ Undertaking letter (2)_cust_1745346394.pdf (employee_t&e, 0.95, 1p)]Processing 500 files - Classification:  69%|██████▊   | 343/500 [08:35<03:01,  1.15s/file, ✅ Undertaking letter (2)_cust_1745346394.pdf (employee_t&e, 0.95, 1p)]2025-08-06 22:57:54,693 - INFO - [CLASSIFY] UP Godown(CBPIL)_cust_1745346429.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:57:54,694 - INFO - [CLASSIFY] scan0428.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:54,695 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  69%|██████▊   | 343/500 [08:37<03:01,  1.15s/file, ✅ UP Godown(CBPIL)_cust_1745346429.pdf (irrelevant, 0.95, 7p)]        Processing 500 files - Classification:  69%|██████▉   | 344/500 [08:37<03:40,  1.42s/file, ✅ UP Godown(CBPIL)_cust_1745346429.pdf (irrelevant, 0.95, 7p)]2025-08-06 22:57:54,752 - INFO - [CLASSIFY] Madhu Sudan Sharma-Feb18-FFS-Pay Slip_cust_1745346494.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:57:54,753 - INFO - [CLASSIFY] CROWN 2140.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:57:54,753 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  69%|██████▉   | 344/500 [08:37<03:40,  1.42s/file, ✅ Madhu Sudan Sharma-Feb18-FFS-Pay Slip_cust_1745346494.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:57:57,305 - INFO - [CLASSIFY] 68464.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:57:57,307 - INFO - [CLASSIFY] Pooja Mam Pass Port.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:57:57,307 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  69%|██████▉   | 345/500 [08:39<03:39,  1.42s/file, ✅ 68464.pdf (vendor_invoice, 1.00, 7p)]                                            Processing 500 files - Classification:  69%|██████▉   | 346/500 [08:39<03:31,  1.37s/file, ✅ 68464.pdf (vendor_invoice, 1.00, 7p)]2025-08-06 22:57:59,058 - INFO - [CLASSIFY] Apr Expat.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:57:59,058 - INFO - [CLASSIFY] taxguru.in-Financial Statements-Schedule-III  Companies Act 2013.pdf - Attempt 1/3 (Total pages: 18)
+2025-08-06 22:57:59,058 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  69%|██████▉   | 346/500 [08:41<03:31,  1.37s/file, ✅ Apr Expat.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  69%|██████▉   | 347/500 [08:41<03:43,  1.46s/file, ✅ Apr Expat.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:00,772 - INFO - [CLASSIFY] Advance Reporting.pdf - Success: irrelevant (confidence: 0.90)
+2025-08-06 22:58:00,773 - INFO - [CLASSIFY] Schedules B.pdf - Attempt 1/3 (Total pages: 24)
+2025-08-06 22:58:00,773 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  69%|██████▉   | 347/500 [08:43<03:43,  1.46s/file, ✅ Advance Reporting.pdf (irrelevant, 0.90, 4p)]Processing 500 files - Classification:  70%|██████▉   | 348/500 [08:43<03:52,  1.53s/file, ✅ Advance Reporting.pdf (irrelevant, 0.90, 4p)]2025-08-06 22:58:00,915 - INFO - [CLASSIFY] Invoice 26.12.16 to 31.12.16.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:00,916 - INFO - [CLASSIFY] 68538.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:00,916 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  70%|██████▉   | 348/500 [08:43<03:52,  1.53s/file, ✅ Invoice 26.12.16 to 31.12.16.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  70%|██████▉   | 349/500 [08:43<02:53,  1.15s/file, ✅ Invoice 26.12.16 to 31.12.16.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:03,397 - INFO - [CLASSIFY] Invoice 073-17_cust_1745346439.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:03,397 - INFO - [CLASSIFY] Ledger Account - Privilege.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:03,397 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  70%|██████▉   | 349/500 [08:46<02:53,  1.15s/file, ✅ Invoice 073-17_cust_1745346439.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  70%|███████   | 350/500 [08:46<03:48,  1.52s/file, ✅ Invoice 073-17_cust_1745346439.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:04,610 - INFO - [CLASSIFY] Vilas Ansane-Pay Slip-Apr17_cust_1745346504.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:04,612 - INFO - [CLASSIFY] Invoice 126-17_cust_1745346441.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:04,612 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  70%|███████   | 350/500 [08:47<03:48,  1.52s/file, ✅ Vilas Ansane-Pay Slip-Apr17_cust_1745346504.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  70%|███████   | 351/500 [08:47<03:33,  1.43s/file, ✅ Vilas Ansane-Pay Slip-Apr17_cust_1745346504.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:58:05,723 - INFO - [CLASSIFY] FI User Manual GL and AP.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:05,723 - INFO - [CLASSIFY] Aakash Kohli-Pay Slip-May17.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:05,723 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  70%|███████   | 351/500 [08:48<03:33,  1.43s/file, ✅ FI User Manual GL and AP.pdf (irrelevant, 1.00, 120p)]                 Processing 500 files - Classification:  70%|███████   | 352/500 [08:48<03:18,  1.34s/file, ✅ FI User Manual GL and AP.pdf (irrelevant, 1.00, 120p)]2025-08-06 22:58:05,917 - INFO - [CLASSIFY] 35993.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:05,918 - INFO - [CLASSIFY] 2655840006_69103330601201716482_cust_1745346553.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:05,918 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  70%|███████   | 352/500 [08:48<03:18,  1.34s/file, ✅ 35993.pdf (vendor_invoice, 0.95, 1p)]                 Processing 500 files - Classification:  71%|███████   | 353/500 [08:48<02:27,  1.00s/file, ✅ 35993.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:09,644 - INFO - [CLASSIFY] CROWN 2140.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:09,645 - INFO - [CLASSIFY] Feb-17 Regular_cust_1745346506.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:09,645 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  71%|███████   | 353/500 [08:52<02:27,  1.00s/file, ✅ CROWN 2140.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  71%|███████   | 354/500 [08:52<04:23,  1.81s/file, ✅ CROWN 2140.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:11,199 - INFO - [CLASSIFY] scan0428.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:11,199 - INFO - [CLASSIFY] InvoiceSHAIN000ABI_8555.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:11,199 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  71%|███████   | 354/500 [08:53<04:23,  1.81s/file, ✅ scan0428.pdf (vendor_invoice, 1.00, 1p)]  Processing 500 files - Classification:  71%|███████   | 355/500 [08:53<04:11,  1.73s/file, ✅ scan0428.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:12,209 - INFO - [CLASSIFY] Pooja Mam Pass Port.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:12,210 - INFO - [CLASSIFY] 43178.pdf - Attempt 1/3 (Total pages: 6)
+2025-08-06 22:58:12,211 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  71%|███████   | 355/500 [08:54<04:11,  1.73s/file, ✅ Pooja Mam Pass Port.pdf (irrelevant, 1.00, 2p)]Processing 500 files - Classification:  71%|███████   | 356/500 [08:54<03:38,  1.52s/file, ✅ Pooja Mam Pass Port.pdf (irrelevant, 1.00, 2p)]2025-08-06 22:58:13,395 - INFO - [CLASSIFY] taxguru.in-Financial Statements-Schedule-III  Companies Act 2013.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:13,396 - INFO - [CLASSIFY] Arrear Regular_cust_1745346488.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:13,396 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  71%|███████   | 356/500 [08:56<03:38,  1.52s/file, ✅ taxguru.in-Financial Statements-Schedule-III  Companies Act 2013.pdf (irrelevant, 1.00, 18p)]Processing 500 files - Classification:  71%|███████▏  | 357/500 [08:56<03:22,  1.42s/file, ✅ taxguru.in-Financial Statements-Schedule-III  Companies Act 2013.pdf (irrelevant, 1.00, 18p)]2025-08-06 22:58:13,959 - INFO - [CLASSIFY] 68538.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:13,959 - INFO - [CLASSIFY] PRIVILAGE LEDGER.PDF - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:58:13,959 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  71%|███████▏  | 357/500 [08:56<03:22,  1.42s/file, ✅ 68538.pdf (vendor_invoice, 1.00, 1p)]                                                        Processing 500 files - Classification:  72%|███████▏  | 358/500 [08:56<02:45,  1.16s/file, ✅ 68538.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:15,341 - INFO - [CLASSIFY] Invoice 126-17_cust_1745346441.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:15,342 - INFO - [CLASSIFY] Inv Brew May 17-18 02_cust_1745346419.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:15,342 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  72%|███████▏  | 358/500 [08:58<02:45,  1.16s/file, ✅ Invoice 126-17_cust_1745346441.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  72%|███████▏  | 359/500 [08:58<02:53,  1.23s/file, ✅ Invoice 126-17_cust_1745346441.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:16,817 - INFO - [CLASSIFY] Schedules B.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:16,817 - INFO - [CLASSIFY] Jan-01.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:16,817 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  72%|███████▏  | 359/500 [08:59<02:53,  1.23s/file, ✅ Schedules B.pdf (irrelevant, 1.00, 24p)]                      Processing 500 files - Classification:  72%|███████▏  | 360/500 [08:59<03:02,  1.30s/file, ✅ Schedules B.pdf (irrelevant, 1.00, 24p)]2025-08-06 22:58:18,038 - INFO - [CLASSIFY] 2655840006_69103330601201716482_cust_1745346553.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:18,039 - INFO - [CLASSIFY] Saurabh verma (1317628).pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:18,039 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  72%|███████▏  | 360/500 [09:00<03:02,  1.30s/file, ✅ 2655840006_69103330601201716482_cust_1745346553.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  72%|███████▏  | 361/500 [09:00<02:57,  1.28s/file, ✅ 2655840006_69103330601201716482_cust_1745346553.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:18,859 - INFO - [CLASSIFY] Aakash Kohli-Pay Slip-May17.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:18,860 - INFO - [CLASSIFY] 45469.pdf - Attempt 1/3 (Total pages: 4)
+2025-08-06 22:58:18,860 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  72%|███████▏  | 361/500 [09:01<02:57,  1.28s/file, ✅ Aakash Kohli-Pay Slip-May17.pdf (irrelevant, 1.00, 1p)]                        Processing 500 files - Classification:  72%|███████▏  | 362/500 [09:01<02:37,  1.14s/file, ✅ Aakash Kohli-Pay Slip-May17.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:58:19,788 - INFO - [CLASSIFY] Ledger Account - Privilege.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:58:19,789 - INFO - [CLASSIFY] Mar-01.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:19,789 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  72%|███████▏  | 362/500 [09:02<02:37,  1.14s/file, ✅ Ledger Account - Privilege.pdf (vendor_invoice, 0.90, 1p)]Processing 500 files - Classification:  73%|███████▎  | 363/500 [09:02<02:27,  1.08s/file, ✅ Ledger Account - Privilege.pdf (vendor_invoice, 0.90, 1p)]2025-08-06 22:58:22,240 - INFO - [CLASSIFY] Feb-17 Regular_cust_1745346506.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:22,241 - INFO - [CLASSIFY] Expat_cust_1745346490.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:22,241 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  73%|███████▎  | 363/500 [09:04<02:27,  1.08s/file, ✅ Feb-17 Regular_cust_1745346506.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  73%|███████▎  | 364/500 [09:04<03:22,  1.49s/file, ✅ Feb-17 Regular_cust_1745346506.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:23,082 - INFO - [CLASSIFY] InvoiceSHAIN000ABI_8555.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:23,083 - INFO - [CLASSIFY] 4262_001_cust_1745346382.pdf - Attempt 1/3 (Total pages: 34)
+2025-08-06 22:58:23,084 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  73%|███████▎  | 364/500 [09:05<03:22,  1.49s/file, ✅ InvoiceSHAIN000ABI_8555.pdf (vendor_invoice, 1.00, 1p)]       Processing 500 files - Classification:  73%|███████▎  | 365/500 [09:05<02:55,  1.30s/file, ✅ InvoiceSHAIN000ABI_8555.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:26,046 - INFO - [CLASSIFY] 43178.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:26,047 - INFO - [CLASSIFY] Online_UploadRpt_2649764451_30082016075253_cust_1745346428.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:26,047 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  73%|███████▎  | 365/500 [09:08<02:55,  1.30s/file, ✅ 43178.pdf (vendor_invoice, 1.00, 6p)]                  Processing 500 files - Classification:  73%|███████▎  | 366/500 [09:08<04:00,  1.79s/file, ✅ 43178.pdf (vendor_invoice, 1.00, 6p)]2025-08-06 22:58:27,511 - INFO - [CLASSIFY] Arrear Regular_cust_1745346488.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:27,512 - INFO - [CLASSIFY] Crow1n.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:27,512 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  73%|███████▎  | 366/500 [09:10<04:00,  1.79s/file, ✅ Arrear Regular_cust_1745346488.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  73%|███████▎  | 367/500 [09:10<03:45,  1.70s/file, ✅ Arrear Regular_cust_1745346488.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:28,094 - INFO - [CLASSIFY] Saurabh verma (1317628).pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:28,095 - INFO - [CLASSIFY] Jul-01.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:28,095 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  73%|███████▎  | 367/500 [09:10<03:45,  1.70s/file, ✅ Saurabh verma (1317628).pdf (irrelevant, 1.00, 1p)]           Processing 500 files - Classification:  74%|███████▎  | 368/500 [09:10<02:59,  1.36s/file, ✅ Saurabh verma (1317628).pdf (irrelevant, 1.00, 1p)]2025-08-06 22:58:28,349 - INFO - [CLASSIFY] Inv Brew May 17-18 02_cust_1745346419.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:28,349 - INFO - [CLASSIFY] Harish M_F&F_Sales Incentive_cust_1745346481.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:28,350 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  74%|███████▎  | 368/500 [09:11<02:59,  1.36s/file, ✅ Inv Brew May 17-18 02_cust_1745346419.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  74%|███████▍  | 369/500 [09:11<02:14,  1.03s/file, ✅ Inv Brew May 17-18 02_cust_1745346419.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:29,713 - INFO - [CLASSIFY] PRIVILAGE LEDGER.PDF - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:58:29,714 - INFO - [CLASSIFY] 58821.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:58:29,714 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  74%|███████▍  | 369/500 [09:12<02:14,  1.03s/file, ✅ PRIVILAGE LEDGER.PDF (vendor_invoice, 0.90, 2p)]                     Processing 500 files - Classification:  74%|███████▍  | 370/500 [09:12<02:26,  1.13s/file, ✅ PRIVILAGE LEDGER.PDF (vendor_invoice, 0.90, 2p)]2025-08-06 22:58:30,033 - INFO - [CLASSIFY] Mar-01.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:30,034 - INFO - [CLASSIFY] 4370.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:58:30,034 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  74%|███████▍  | 370/500 [09:12<02:26,  1.13s/file, ✅ Mar-01.pdf (vendor_invoice, 1.00, 1p)]          Processing 500 files - Classification:  74%|███████▍  | 371/500 [09:12<01:54,  1.13file/s, ✅ Mar-01.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:30,258 - INFO - [CLASSIFY] 45469.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:30,259 - INFO - [CLASSIFY] AACCC9946QST001_28_05_2013.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:58:30,259 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  74%|███████▍  | 371/500 [09:12<01:54,  1.13file/s, ✅ 45469.pdf (vendor_invoice, 1.00, 4p)] Processing 500 files - Classification:  74%|███████▍  | 372/500 [09:12<01:28,  1.45file/s, ✅ 45469.pdf (vendor_invoice, 1.00, 4p)]2025-08-06 22:58:30,553 - INFO - [CLASSIFY] Jan-01.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:30,554 - INFO - [CLASSIFY] scan0414.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:30,555 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  74%|███████▍  | 372/500 [09:13<01:28,  1.45file/s, ✅ Jan-01.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  75%|███████▍  | 373/500 [09:13<01:12,  1.75file/s, ✅ Jan-01.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:40,060 - INFO - [CLASSIFY] Expat_cust_1745346490.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:40,061 - INFO - [CLASSIFY] companies act 2013.pdf - Attempt 1/3 (Total pages: 294)
+2025-08-06 22:58:40,061 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  75%|███████▍  | 373/500 [09:22<01:12,  1.75file/s, ✅ Expat_cust_1745346490.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  75%|███████▍  | 374/500 [09:22<06:49,  3.25s/file, ✅ Expat_cust_1745346490.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:40,281 - INFO - [CLASSIFY] Jul-01.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:40,281 - INFO - [CLASSIFY] 2500017784.pdf - Attempt 1/3 (Total pages: 4)
+2025-08-06 22:58:40,281 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  75%|███████▍  | 374/500 [09:22<06:49,  3.25s/file, ✅ Jul-01.pdf (vendor_invoice, 1.00, 1p)]               Processing 500 files - Classification:  75%|███████▌  | 375/500 [09:22<04:52,  2.34s/file, ✅ Jul-01.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:58:40,337 - INFO - [CLASSIFY] Crow1n.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:40,338 - INFO - [CLASSIFY] priv16 (08.10.15).pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:40,338 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  75%|███████▌  | 375/500 [09:22<04:52,  2.34s/file, ✅ Crow1n.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:42,110 - INFO - [CLASSIFY] Online_UploadRpt_2649764451_30082016075253_cust_1745346428.pdf - Success: irrelevant (confidence: 0.90)
+2025-08-06 22:58:42,111 - INFO - [CLASSIFY] Invoice 175-16_cust_1745346438.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:42,112 - INFO - AFC is enabled with max remote calls: 10.
+2025-08-06 22:58:42,122 - INFO - [CLASSIFY] Harish M_F&F_Sales Incentive_cust_1745346481.pdf - Success: irrelevant (confidence: 0.95)
+Processing 500 files - Classification:  75%|███████▌  | 376/500 [09:24<04:50,  2.34s/file, ✅ Online_UploadRpt_2649764451_30082016075253_cust_1745346428.pdf (irrelevant, 0.90, 1p)]Processing 500 files - Classification:  75%|███████▌  | 377/500 [09:24<03:27,  1.69s/file, ✅ Online_UploadRpt_2649764451_30082016075253_cust_1745346428.pdf (irrelevant, 0.90, 1p)]2025-08-06 22:58:42,124 - INFO - [CLASSIFY] FF-Sheets_Resettlement_Minu Menachery-Rev (002)_cust_1745346493.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:42,124 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  75%|███████▌  | 377/500 [09:24<03:27,  1.69s/file, ✅ Harish M_F&F_Sales Incentive_cust_1745346481.pdf (irrelevant, 0.95, 1p)]              2025-08-06 22:58:43,769 - INFO - [CLASSIFY] 4262_001_cust_1745346382.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:43,769 - INFO - [CLASSIFY] Draft CARO report_cust_1745346381.pdf - Attempt 1/3 (Total pages: 3)
+2025-08-06 22:58:43,770 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  76%|███████▌  | 378/500 [09:26<03:25,  1.69s/file, ✅ 4262_001_cust_1745346382.pdf (vendor_invoice, 0.95, 34p)]               Processing 500 files - Classification:  76%|███████▌  | 379/500 [09:26<02:42,  1.34s/file, ✅ 4262_001_cust_1745346382.pdf (vendor_invoice, 0.95, 34p)]2025-08-06 22:58:44,024 - INFO - [CLASSIFY] AACCC9946QST001_28_05_2013.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:44,025 - INFO - [CLASSIFY] Imitiaz Ahmed - AP Godown_cust_1745346418.pdf - Attempt 1/3 (Total pages: 3)
+2025-08-06 22:58:44,025 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  76%|███████▌  | 379/500 [09:26<02:42,  1.34s/file, ✅ AACCC9946QST001_28_05_2013.pdf (irrelevant, 1.00, 2p)]   Processing 500 files - Classification:  76%|███████▌  | 380/500 [09:26<02:13,  1.11s/file, ✅ AACCC9946QST001_28_05_2013.pdf (irrelevant, 1.00, 2p)]2025-08-06 22:58:44,135 - INFO - [CLASSIFY] scan0414.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:44,136 - INFO - [CLASSIFY] 2500018851.pdf - Attempt 1/3 (Total pages: 5)
+2025-08-06 22:58:44,136 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  76%|███████▌  | 380/500 [09:26<02:13,  1.11s/file, ✅ scan0414.pdf (vendor_invoice, 0.95, 1p)]              2025-08-06 22:58:44,590 - WARNING - [CLASSIFY] 4370.pdf - JSON malformed, attempting repair: Expecting ',' delimiter: line 14 column 3 (char 319)
+2025-08-06 22:58:44,591 - ERROR - [CLASSIFY] 4370.pdf - JSON repair failed
+2025-08-06 22:58:44,591 - ERROR - [CLASSIFY] 4370.pdf - JSON decode failed: Expecting ',' delimiter: line 14 column 3 (char 319)
+2025-08-06 22:58:44,592 - INFO - [CLASSIFY] prev tds 7.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:58:44,592 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  76%|███████▌  | 381/500 [09:27<02:11,  1.11s/file, ❌ 4370.pdf]                               2025-08-06 22:58:44,599 - WARNING - [CLASSIFICATION FAILED] 4370.pdf
+Processing 500 files - Classification:  76%|███████▋  | 382/500 [09:27<01:32,  1.27file/s, ❌ 4370.pdf]2025-08-06 22:58:44,840 - INFO - [CLASSIFY] 58821.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:44,841 - INFO - [CLASSIFY] PNB OpMiniStatement14-06-2017.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:44,841 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  76%|███████▋  | 382/500 [09:27<01:32,  1.27file/s, ✅ 58821.pdf (vendor_invoice, 1.00, 2p)]Processing 500 files - Classification:  77%|███████▋  | 383/500 [09:27<01:18,  1.50file/s, ✅ 58821.pdf (vendor_invoice, 1.00, 2p)]2025-08-06 22:58:52,768 - INFO - [CLASSIFY] companies act 2013.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:52,769 - INFO - [CLASSIFY] 0182_001.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:52,769 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  77%|███████▋  | 383/500 [09:35<01:18,  1.50file/s, ✅ companies act 2013.pdf (irrelevant, 1.00, 294p)]Processing 500 files - Classification:  77%|███████▋  | 384/500 [09:35<04:36,  2.38s/file, ✅ companies act 2013.pdf (irrelevant, 1.00, 294p)]2025-08-06 22:58:52,819 - WARNING - [CLASSIFY] Invoice 175-16_cust_1745346438.pdf - JSON malformed, attempting repair: Expecting ',' delimiter: line 13 column 3 (char 351)
+2025-08-06 22:58:52,819 - ERROR - [CLASSIFY] Invoice 175-16_cust_1745346438.pdf - JSON repair failed
+2025-08-06 22:58:52,820 - ERROR - [CLASSIFY] Invoice 175-16_cust_1745346438.pdf - JSON decode failed: Expecting ',' delimiter: line 13 column 3 (char 351)
+2025-08-06 22:58:52,821 - INFO - [CLASSIFY] 543-17_cust_1745346444.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:52,821 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  77%|███████▋  | 384/500 [09:35<04:36,  2.38s/file, ❌ Invoice 175-16_cust_1745346438.pdf]             2025-08-06 22:58:52,831 - WARNING - [CLASSIFICATION FAILED] Invoice 175-16_cust_1745346438.pdf
+2025-08-06 22:58:53,502 - INFO - [CLASSIFY] PNB OpMiniStatement14-06-2017.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:53,502 - INFO - [CLASSIFY] Arrears Regular_cust_1745346500.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:53,502 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  77%|███████▋  | 385/500 [09:36<04:34,  2.38s/file, ✅ PNB OpMiniStatement14-06-2017.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  77%|███████▋  | 386/500 [09:36<02:59,  1.57s/file, ✅ PNB OpMiniStatement14-06-2017.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:58:53,969 - INFO - [CLASSIFY] priv16 (08.10.15).pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:53,969 - INFO - [CLASSIFY] APR 16.pdf - Attempt 1/3 (Total pages: 3)
+2025-08-06 22:58:53,969 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  77%|███████▋  | 386/500 [09:36<02:59,  1.57s/file, ✅ priv16 (08.10.15).pdf (vendor_invoice, 0.95, 1p)]        Processing 500 files - Classification:  77%|███████▋  | 387/500 [09:36<02:29,  1.32s/file, ✅ priv16 (08.10.15).pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:58:55,254 - INFO - [CLASSIFY] 2500017784.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:58:55,255 - INFO - [CLASSIFY] INV-200583.pdf - Attempt 1/3 (Total pages: 10)
+2025-08-06 22:58:55,255 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  77%|███████▋  | 387/500 [09:37<02:29,  1.32s/file, ✅ 2500017784.pdf (vendor_invoice, 1.00, 4p)]       Processing 500 files - Classification:  78%|███████▊  | 388/500 [09:37<02:27,  1.32s/file, ✅ 2500017784.pdf (vendor_invoice, 1.00, 4p)]2025-08-06 22:58:55,829 - INFO - [CLASSIFY] Draft CARO report_cust_1745346381.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:55,829 - INFO - [CLASSIFY] FInancials_cust_1745346379.pdf - Attempt 1/3 (Total pages: 16)
+2025-08-06 22:58:55,830 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  78%|███████▊  | 388/500 [09:38<02:27,  1.32s/file, ✅ Draft CARO report_cust_1745346381.pdf (irrelevant, 1.00, 3p)]Processing 500 files - Classification:  78%|███████▊  | 389/500 [09:38<02:04,  1.12s/file, ✅ Draft CARO report_cust_1745346381.pdf (irrelevant, 1.00, 3p)]2025-08-06 22:58:56,445 - INFO - [CLASSIFY] FF-Sheets_Resettlement_Minu Menachery-Rev (002)_cust_1745346493.pdf - Success: employee_t&e (confidence: 0.90)
+2025-08-06 22:58:56,446 - INFO - [CLASSIFY] CIN03-7881184905-2500003852-20170602.PDF - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:58:56,446 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  78%|███████▊  | 389/500 [09:39<02:04,  1.12s/file, ✅ FF-Sheets_Resettlement_Minu Menachery-Rev (002)_cust_1745346493.pdf (employee_t&e, 0.90, 1p)]Processing 500 files - Classification:  78%|███████▊  | 390/500 [09:39<01:48,  1.01file/s, ✅ FF-Sheets_Resettlement_Minu Menachery-Rev (002)_cust_1745346493.pdf (employee_t&e, 0.90, 1p)]2025-08-06 22:58:56,690 - INFO - [CLASSIFY] 2500018851.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:56,691 - INFO - [CLASSIFY] CROWBBEERSPEDINGBILLS.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:56,692 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  78%|███████▊  | 390/500 [09:39<01:48,  1.01file/s, ✅ 2500018851.pdf (vendor_invoice, 0.95, 5p)]                                                   Processing 500 files - Classification:  78%|███████▊  | 391/500 [09:39<01:25,  1.28file/s, ✅ 2500018851.pdf (vendor_invoice, 0.95, 5p)]2025-08-06 22:58:58,507 - INFO - [CLASSIFY] prev tds 7.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:58:58,508 - INFO - [CLASSIFY] Feb-17 Expat.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:58:58,508 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  78%|███████▊  | 391/500 [09:41<01:25,  1.28file/s, ✅ prev tds 7.pdf (vendor_invoice, 0.95, 2p)]Processing 500 files - Classification:  78%|███████▊  | 392/500 [09:41<01:56,  1.07s/file, ✅ prev tds 7.pdf (vendor_invoice, 0.95, 2p)]2025-08-06 22:58:58,998 - INFO - [CLASSIFY] Imitiaz Ahmed - AP Godown_cust_1745346418.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:58:58,998 - INFO - [CLASSIFY] SAP_1741.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:58:58,998 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  78%|███████▊  | 392/500 [09:41<01:56,  1.07s/file, ✅ Imitiaz Ahmed - AP Godown_cust_1745346418.pdf (irrelevant, 1.00, 3p)]Processing 500 files - Classification:  79%|███████▊  | 393/500 [09:41<01:36,  1.10file/s, ✅ Imitiaz Ahmed - AP Godown_cust_1745346418.pdf (irrelevant, 1.00, 3p)]2025-08-06 22:59:05,790 - INFO - [CLASSIFY] 543-17_cust_1745346444.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:59:05,792 - INFO - [CLASSIFY] Rep letter_IN0001_1506 final_cust_1745346376.pdf - Attempt 1/3 (Total pages: 14)
+2025-08-06 22:59:05,793 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  79%|███████▊  | 393/500 [09:48<01:36,  1.10file/s, ✅ 543-17_cust_1745346444.pdf (vendor_invoice, 1.00, 1p)]               Processing 500 files - Classification:  79%|███████▉  | 394/500 [09:48<04:38,  2.63s/file, ✅ 543-17_cust_1745346444.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:59:06,094 - INFO - [CLASSIFY] APR 16.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:59:06,094 - INFO - [CLASSIFY] Siddhant Jain-Pay Slip-May18-FFS_cust_1745346498.PDF - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:06,095 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  79%|███████▉  | 394/500 [09:48<04:38,  2.63s/file, ✅ APR 16.pdf (irrelevant, 0.95, 3p)]                    Processing 500 files - Classification:  79%|███████▉  | 395/500 [09:48<03:23,  1.94s/file, ✅ APR 16.pdf (irrelevant, 0.95, 3p)]2025-08-06 22:59:07,758 - INFO - [CLASSIFY] 0182_001.pdf - Success: irrelevant (confidence: 0.90)
+2025-08-06 22:59:07,759 - INFO - [CLASSIFY] Invoice 148_15_cust_1745346309.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:07,759 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  79%|███████▉  | 395/500 [09:50<03:23,  1.94s/file, ✅ 0182_001.pdf (irrelevant, 0.90, 1p)]Processing 500 files - Classification:  79%|███████▉  | 396/500 [09:50<03:13,  1.86s/file, ✅ 0182_001.pdf (irrelevant, 0.90, 1p)]2025-08-06 22:59:07,992 - INFO - [CLASSIFY] Arrears Regular_cust_1745346500.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:07,993 - INFO - [CLASSIFY] Emmanuel PAN_cust_1745346344.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:07,993 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  79%|███████▉  | 396/500 [09:50<03:13,  1.86s/file, ✅ Arrears Regular_cust_1745346500.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  79%|███████▉  | 397/500 [09:50<02:21,  1.38s/file, ✅ Arrears Regular_cust_1745346500.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:09,334 - INFO - [CLASSIFY] CROWBBEERSPEDINGBILLS.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:09,334 - INFO - [CLASSIFY] BOE 15015.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:59:09,334 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  79%|███████▉  | 397/500 [09:51<02:21,  1.38s/file, ✅ CROWBBEERSPEDINGBILLS.pdf (vendor_invoice, 0.95, 1p)]          Processing 500 files - Classification:  80%|███████▉  | 398/500 [09:51<02:19,  1.37s/file, ✅ CROWBBEERSPEDINGBILLS.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:10,209 - INFO - [CLASSIFY] FInancials_cust_1745346379.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:59:10,210 - INFO - [CLASSIFY] Prvi 15.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:59:10,211 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  80%|███████▉  | 398/500 [09:52<02:19,  1.37s/file, ✅ FInancials_cust_1745346379.pdf (irrelevant, 1.00, 16p)]Processing 500 files - Classification:  80%|███████▉  | 399/500 [09:52<02:03,  1.22s/file, ✅ FInancials_cust_1745346379.pdf (irrelevant, 1.00, 16p)]2025-08-06 22:59:10,613 - INFO - [CLASSIFY] SAP_1741.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:59:10,614 - INFO - [CLASSIFY] Depositor Information Sheet New Customers XXEN (003 00000 00 DBEN 12....pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:10,614 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  80%|███████▉  | 399/500 [09:53<02:03,  1.22s/file, ✅ SAP_1741.pdf (vendor_invoice, 1.00, 2p)]               Processing 500 files - Classification:  80%|████████  | 400/500 [09:53<01:37,  1.02file/s, ✅ SAP_1741.pdf (vendor_invoice, 1.00, 2p)]2025-08-06 22:59:10,726 - INFO - [CLASSIFY] CIN03-7881184905-2500003852-20170602.PDF - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:59:10,727 - INFO - [CLASSIFY] CROWN REIMBURSEMENT Ledger_cust_1745346525.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:59:10,727 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  80%|████████  | 400/500 [09:53<01:37,  1.02file/s, ✅ CIN03-7881184905-2500003852-20170602.PDF (vendor_invoice, 1.00, 2p)]Processing 500 files - Classification:  80%|████████  | 401/500 [09:53<01:10,  1.40file/s, ✅ CIN03-7881184905-2500003852-20170602.PDF (vendor_invoice, 1.00, 2p)]2025-08-06 22:59:12,589 - INFO - [CLASSIFY] Feb-17 Expat.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:59:12,590 - INFO - [CLASSIFY] DOCS_IN04161202_B.pdf - Attempt 1/3 (Total pages: 18)
+2025-08-06 22:59:12,590 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  80%|████████  | 401/500 [09:55<01:10,  1.40file/s, ✅ Feb-17 Expat.pdf (vendor_invoice, 1.00, 1p)]                        Processing 500 files - Classification:  80%|████████  | 402/500 [09:55<01:44,  1.07s/file, ✅ Feb-17 Expat.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:59:16,717 - INFO - [CLASSIFY] Siddhant Jain-Pay Slip-May18-FFS_cust_1745346498.PDF - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:59:16,718 - INFO - [CLASSIFY] BOA 1 feb_cust_1745346422.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:16,718 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  80%|████████  | 402/500 [09:59<01:44,  1.07s/file, ✅ Siddhant Jain-Pay Slip-May18-FFS_cust_1745346498.PDF (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  81%|████████  | 403/500 [09:59<03:11,  1.98s/file, ✅ Siddhant Jain-Pay Slip-May18-FFS_cust_1745346498.PDF (irrelevant, 1.00, 1p)]2025-08-06 22:59:18,038 - INFO - [CLASSIFY] INV-200583.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:59:18,038 - INFO - [CLASSIFY] CROWN ESIC 16289_cust_1745346469.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:18,039 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  81%|████████  | 403/500 [10:00<03:11,  1.98s/file, ✅ INV-200583.pdf (vendor_invoice, 0.90, 10p)]                                 Processing 500 files - Classification:  81%|████████  | 404/500 [10:00<02:51,  1.78s/file, ✅ INV-200583.pdf (vendor_invoice, 0.90, 10p)]2025-08-06 22:59:19,129 - INFO - [CLASSIFY] Emmanuel PAN_cust_1745346344.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:59:19,130 - INFO - [CLASSIFY] Jitendra_Kumar_Srivastava_cust_1745346479.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:19,130 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  81%|████████  | 404/500 [10:01<02:51,  1.78s/file, ✅ Emmanuel PAN_cust_1745346344.pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  81%|████████  | 405/500 [10:01<02:29,  1.57s/file, ✅ Emmanuel PAN_cust_1745346344.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:59:21,362 - INFO - [CLASSIFY] Invoice 148_15_cust_1745346309.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:21,363 - INFO - [CLASSIFY] Financials- for PDF 2014 new_cust_1745346319.pdf - Attempt 1/3 (Total pages: 17)
+2025-08-06 22:59:21,363 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  81%|████████  | 405/500 [10:04<02:29,  1.57s/file, ✅ Invoice 148_15_cust_1745346309.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  81%|████████  | 406/500 [10:04<02:46,  1.77s/file, ✅ Invoice 148_15_cust_1745346309.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:23,679 - INFO - [CLASSIFY] Depositor Information Sheet New Customers XXEN (003 00000 00 DBEN 12....pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:59:23,680 - INFO - [CLASSIFY] Sunil and Bina Ramchandani - Mumbai Office_cust_1745346422.pdf - Attempt 1/3 (Total pages: 26)
+2025-08-06 22:59:23,680 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  81%|████████  | 406/500 [10:06<02:46,  1.77s/file, ✅ Depositor Information Sheet New Customers XXEN (003 00000 00 DBEN 12....pdf (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  81%|████████▏ | 407/500 [10:06<03:00,  1.95s/file, ✅ Depositor Information Sheet New Customers XXEN (003 00000 00 DBEN 12....pdf (irrelevant, 1.00, 1p)]2025-08-06 22:59:23,874 - INFO - [CLASSIFY] BOE 15015.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:23,874 - INFO - [CLASSIFY] 073_A_cust_1745346354.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:59:23,874 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  81%|████████▏ | 407/500 [10:06<03:00,  1.95s/file, ✅ BOE 15015.pdf (vendor_invoice, 0.95, 2p)]                                                          Processing 500 files - Classification:  82%|████████▏ | 408/500 [10:06<02:09,  1.41s/file, ✅ BOE 15015.pdf (vendor_invoice, 0.95, 2p)]2025-08-06 22:59:24,504 - INFO - [CLASSIFY] Rep letter_IN0001_1506 final_cust_1745346376.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:59:24,505 - INFO - [CLASSIFY] Deepak Nagarmath-Pay Slip-Mar18-FFS.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:24,505 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  82%|████████▏ | 408/500 [10:07<02:09,  1.41s/file, ✅ Rep letter_IN0001_1506 final_cust_1745346376.pdf (irrelevant, 0.95, 14p)]Processing 500 files - Classification:  82%|████████▏ | 409/500 [10:07<01:46,  1.18s/file, ✅ Rep letter_IN0001_1506 final_cust_1745346376.pdf (irrelevant, 0.95, 14p)]2025-08-06 22:59:24,710 - INFO - [CLASSIFY] Prvi 15.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:24,710 - INFO - [CLASSIFY] Regular Arrears.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:24,710 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  82%|████████▏ | 409/500 [10:07<01:46,  1.18s/file, ✅ Prvi 15.pdf (vendor_invoice, 0.95, 2p)]                                  Processing 500 files - Classification:  82%|████████▏ | 410/500 [10:07<01:19,  1.13file/s, ✅ Prvi 15.pdf (vendor_invoice, 0.95, 2p)]2025-08-06 22:59:26,957 - INFO - [CLASSIFY] BOA 1 feb_cust_1745346422.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 22:59:26,958 - INFO - [CLASSIFY] INV-90958989.pdf - Attempt 1/3 (Total pages: 7)
+2025-08-06 22:59:26,959 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  82%|████████▏ | 410/500 [10:09<01:19,  1.13file/s, ✅ BOA 1 feb_cust_1745346422.pdf (irrelevant, 0.95, 1p)]Processing 500 files - Classification:  82%|████████▏ | 411/500 [10:09<01:55,  1.30s/file, ✅ BOA 1 feb_cust_1745346422.pdf (irrelevant, 0.95, 1p)]2025-08-06 22:59:26,976 - INFO - [CLASSIFY] CROWN REIMBURSEMENT Ledger_cust_1745346525.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:26,977 - INFO - [CLASSIFY] AIN-3509 TR6.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:26,977 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  82%|████████▏ | 411/500 [10:09<01:55,  1.30s/file, ✅ CROWN REIMBURSEMENT Ledger_cust_1745346525.pdf (vendor_invoice, 0.95, 2p)]2025-08-06 22:59:28,687 - INFO - [CLASSIFY] CROWN ESIC 16289_cust_1745346469.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:28,688 - INFO - [CLASSIFY] CBIPL-ESI-Challan Receipt-November-2017_cust_1745346475.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:28,688 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  82%|████████▏ | 412/500 [10:11<01:54,  1.30s/file, ✅ CROWN ESIC 16289_cust_1745346469.pdf (vendor_invoice, 0.95, 1p)]          Processing 500 files - Classification:  83%|████████▎ | 413/500 [10:11<01:35,  1.10s/file, ✅ CROWN ESIC 16289_cust_1745346469.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:33,749 - INFO - [CLASSIFY] Jitendra_Kumar_Srivastava_cust_1745346479.pdf - Success: employee_t&e (confidence: 1.00)
+2025-08-06 22:59:33,750 - INFO - [CLASSIFY] INV NO.032015-0013.pdf - Attempt 1/3 (Total pages: 9)
+2025-08-06 22:59:33,750 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  83%|████████▎ | 413/500 [10:16<01:35,  1.10s/file, ✅ Jitendra_Kumar_Srivastava_cust_1745346479.pdf (employee_t&e, 1.00, 1p)]Processing 500 files - Classification:  83%|████████▎ | 414/500 [10:16<02:58,  2.08s/file, ✅ Jitendra_Kumar_Srivastava_cust_1745346479.pdf (employee_t&e, 1.00, 1p)]2025-08-06 22:59:34,971 - INFO - [CLASSIFY] Deepak Nagarmath-Pay Slip-Mar18-FFS.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:59:34,972 - INFO - [CLASSIFY] 064_A.pdf - Attempt 1/3 (Total pages: 8)
+2025-08-06 22:59:34,972 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  83%|████████▎ | 414/500 [10:17<02:58,  2.08s/file, ✅ Deepak Nagarmath-Pay Slip-Mar18-FFS.pdf (irrelevant, 1.00, 1p)]        Processing 500 files - Classification:  83%|████████▎ | 415/500 [10:17<02:37,  1.86s/file, ✅ Deepak Nagarmath-Pay Slip-Mar18-FFS.pdf (irrelevant, 1.00, 1p)]2025-08-06 22:59:36,515 - INFO - [CLASSIFY] DOCS_IN04161202_B.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:59:36,515 - INFO - [CLASSIFY] FCGPR-63.335 Cr.pdf - Attempt 1/3 (Total pages: 15)
+2025-08-06 22:59:36,515 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  83%|████████▎ | 415/500 [10:19<02:37,  1.86s/file, ✅ DOCS_IN04161202_B.pdf (vendor_invoice, 0.90, 18p)]             Processing 500 files - Classification:  83%|████████▎ | 416/500 [10:19<02:28,  1.77s/file, ✅ DOCS_IN04161202_B.pdf (vendor_invoice, 0.90, 18p)]2025-08-06 22:59:37,098 - INFO - [CLASSIFY] 073_A_cust_1745346354.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:37,099 - INFO - [CLASSIFY] Gurgaon Trucks Bill Details.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:37,099 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  83%|████████▎ | 416/500 [10:19<02:28,  1.77s/file, ✅ 073_A_cust_1745346354.pdf (vendor_invoice, 0.95, 2p)]Processing 500 files - Classification:  83%|████████▎ | 417/500 [10:19<01:59,  1.44s/file, ✅ 073_A_cust_1745346354.pdf (vendor_invoice, 0.95, 2p)]2025-08-06 22:59:37,581 - INFO - [CLASSIFY] AIN-3509 TR6.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:37,581 - INFO - [CLASSIFY] Arrears Regular_cust_1745346501.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:37,582 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  83%|████████▎ | 417/500 [10:20<01:59,  1.44s/file, ✅ AIN-3509 TR6.pdf (vendor_invoice, 0.95, 1p)]         Processing 500 files - Classification:  84%|████████▎ | 418/500 [10:20<01:35,  1.16s/file, ✅ AIN-3509 TR6.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:37,614 - INFO - [CLASSIFY] Financials- for PDF 2014 new_cust_1745346319.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:59:37,614 - INFO - [CLASSIFY] May Regular Employees Challan_May-17.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:37,615 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  84%|████████▎ | 418/500 [10:20<01:35,  1.16s/file, ✅ Financials- for PDF 2014 new_cust_1745346319.pdf (irrelevant, 1.00, 17p)]2025-08-06 22:59:39,485 - INFO - [CLASSIFY] Regular Arrears.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:39,485 - INFO - [CLASSIFY] 2500015408.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:39,485 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  84%|████████▍ | 419/500 [10:22<01:34,  1.16s/file, ✅ Regular Arrears.pdf (vendor_invoice, 0.95, 1p)]                          Processing 500 files - Classification:  84%|████████▍ | 420/500 [10:22<01:25,  1.07s/file, ✅ Regular Arrears.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:42,366 - INFO - [CLASSIFY] CBIPL-ESI-Challan Receipt-November-2017_cust_1745346475.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:59:42,367 - INFO - [CLASSIFY] MYSOUR.pdf - Attempt 1/3 (Total pages: 4)
+2025-08-06 22:59:42,367 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  84%|████████▍ | 420/500 [10:25<01:25,  1.07s/file, ✅ CBIPL-ESI-Challan Receipt-November-2017_cust_1745346475.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  84%|████████▍ | 421/500 [10:25<01:59,  1.51s/file, ✅ CBIPL-ESI-Challan Receipt-November-2017_cust_1745346475.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:59:42,608 - INFO - [CLASSIFY] Sunil and Bina Ramchandani - Mumbai Office_cust_1745346422.pdf - Success: irrelevant (confidence: 0.90)
+2025-08-06 22:59:42,608 - INFO - [CLASSIFY] 2500015409.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:42,609 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  84%|████████▍ | 421/500 [10:25<01:59,  1.51s/file, ✅ Sunil and Bina Ramchandani - Mumbai Office_cust_1745346422.pdf (irrelevant, 0.90, 26p)]Processing 500 files - Classification:  84%|████████▍ | 422/500 [10:25<01:32,  1.18s/file, ✅ Sunil and Bina Ramchandani - Mumbai Office_cust_1745346422.pdf (irrelevant, 0.90, 26p)]2025-08-06 22:59:46,184 - INFO - [CLASSIFY] INV-90958989.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:46,185 - INFO - [CLASSIFY] prev tds 6.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:59:46,185 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  84%|████████▍ | 422/500 [10:28<01:32,  1.18s/file, ✅ INV-90958989.pdf (vendor_invoice, 0.95, 7p)]                                           Processing 500 files - Classification:  85%|████████▍ | 423/500 [10:28<02:20,  1.83s/file, ✅ INV-90958989.pdf (vendor_invoice, 0.95, 7p)]2025-08-06 22:59:50,424 - INFO - [CLASSIFY] 2500015408.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:59:50,424 - INFO - [CLASSIFY] Invoice 148_15_cust_1745346308.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:50,425 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  85%|████████▍ | 423/500 [10:33<02:20,  1.83s/file, ✅ 2500015408.pdf (vendor_invoice, 1.00, 1p)]  Processing 500 files - Classification:  85%|████████▍ | 424/500 [10:33<03:09,  2.50s/file, ✅ 2500015408.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:59:50,527 - INFO - [CLASSIFY] Gurgaon Trucks Bill Details.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:50,527 - INFO - [CLASSIFY] 9946131939-2.PDF - Attempt 1/3 (Total pages: 2)
+2025-08-06 22:59:50,528 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  85%|████████▍ | 424/500 [10:33<03:09,  2.50s/file, ✅ Gurgaon Trucks Bill Details.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  85%|████████▌ | 425/500 [10:33<02:16,  1.82s/file, ✅ Gurgaon Trucks Bill Details.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:50,556 - INFO - [CLASSIFY] Arrears Regular_cust_1745346501.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:50,556 - INFO - [CLASSIFY] 3796_001.pdf - Attempt 1/3 (Total pages: 8)
+2025-08-06 22:59:50,557 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  85%|████████▌ | 425/500 [10:33<02:16,  1.82s/file, ✅ Arrears Regular_cust_1745346501.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 22:59:50,612 - INFO - [CLASSIFY] May Regular Employees Challan_May-17.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:59:50,613 - INFO - [CLASSIFY] Kalpana Ojha - Odisha Office_cust_1745346422.pdf - Attempt 1/3 (Total pages: 6)
+2025-08-06 22:59:50,613 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  85%|████████▌ | 426/500 [10:33<02:14,  1.82s/file, ✅ May Regular Employees Challan_May-17.pdf (vendor_invoice, 0.90, 1p)]2025-08-06 22:59:51,820 - INFO - [CLASSIFY] 064_A.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 22:59:51,821 - INFO - [CLASSIFY] Priviledge.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:51,821 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  85%|████████▌ | 427/500 [10:34<02:12,  1.82s/file, ✅ 064_A.pdf (vendor_invoice, 0.90, 8p)]                               Processing 500 files - Classification:  86%|████████▌ | 428/500 [10:34<01:16,  1.06s/file, ✅ 064_A.pdf (vendor_invoice, 0.90, 8p)]2025-08-06 22:59:53,840 - INFO - [CLASSIFY] FCGPR-63.335 Cr.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 22:59:53,841 - INFO - [CLASSIFY] Draft CARO report_cust_1745346380.pdf - Attempt 1/3 (Total pages: 3)
+2025-08-06 22:59:53,841 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  86%|████████▌ | 428/500 [10:36<01:16,  1.06s/file, ✅ FCGPR-63.335 Cr.pdf (irrelevant, 1.00, 15p)]Processing 500 files - Classification:  86%|████████▌ | 429/500 [10:36<01:29,  1.26s/file, ✅ FCGPR-63.335 Cr.pdf (irrelevant, 1.00, 15p)]2025-08-06 22:59:54,357 - INFO - [CLASSIFY] 2500015409.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 22:59:54,358 - INFO - [CLASSIFY] BOA_18 DEc.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:54,358 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  86%|████████▌ | 429/500 [10:37<01:29,  1.26s/file, ✅ 2500015409.pdf (vendor_invoice, 1.00, 1p)]  Processing 500 files - Classification:  86%|████████▌ | 430/500 [10:37<01:16,  1.09s/file, ✅ 2500015409.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 22:59:54,481 - INFO - [CLASSIFY] INV NO.032015-0013.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 22:59:54,481 - INFO - [CLASSIFY] CBIPL-ESI-Challan Receipt-June-2017_cust_1745346475.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 22:59:54,482 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  86%|████████▌ | 430/500 [10:37<01:16,  1.09s/file, ✅ INV NO.032015-0013.pdf (vendor_invoice, 0.95, 9p)]Processing 500 files - Classification:  86%|████████▌ | 431/500 [10:37<00:58,  1.18file/s, ✅ INV NO.032015-0013.pdf (vendor_invoice, 0.95, 9p)]2025-08-06 22:59:59,912 - INFO - [CLASSIFY] MYSOUR.pdf - Success: irrelevant (confidence: 0.90)
+2025-08-06 22:59:59,912 - INFO - [CLASSIFY] 4185_001.pdf - Attempt 1/3 (Total pages: 8)
+2025-08-06 22:59:59,913 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  86%|████████▌ | 431/500 [10:42<00:58,  1.18file/s, ✅ MYSOUR.pdf (irrelevant, 0.90, 4p)]                Processing 500 files - Classification:  86%|████████▋ | 432/500 [10:42<02:18,  2.04s/file, ✅ MYSOUR.pdf (irrelevant, 0.90, 4p)]2025-08-06 23:00:00,623 - INFO - [CLASSIFY] Invoice 148_15_cust_1745346308.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 23:00:00,624 - INFO - [CLASSIFY] Paul Boeckx New Pass port_1.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:00,624 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  86%|████████▋ | 432/500 [10:43<02:18,  2.04s/file, ✅ Invoice 148_15_cust_1745346308.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  87%|████████▋ | 433/500 [10:43<01:52,  1.68s/file, ✅ Invoice 148_15_cust_1745346308.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 23:00:01,931 - INFO - [CLASSIFY] 9946131939-2.PDF - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 23:00:01,932 - INFO - [CLASSIFY] Crown Beer Ledger_cust_1745346500.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 23:00:01,932 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  87%|████████▋ | 433/500 [10:44<01:52,  1.68s/file, ✅ 9946131939-2.PDF (vendor_invoice, 1.00, 2p)]                  Processing 500 files - Classification:  87%|████████▋ | 434/500 [10:44<01:44,  1.58s/file, ✅ 9946131939-2.PDF (vendor_invoice, 1.00, 2p)]2025-08-06 23:00:02,831 - INFO - [CLASSIFY] prev tds 6.pdf - Success: vendor_invoice (confidence: 0.90)
+2025-08-06 23:00:02,832 - INFO - [CLASSIFY] TIN NUMBER_cust_1745346377.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 23:00:02,832 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  87%|████████▋ | 434/500 [10:45<01:44,  1.58s/file, ✅ prev tds 6.pdf (vendor_invoice, 0.90, 2p)]  Processing 500 files - Classification:  87%|████████▋ | 435/500 [10:45<01:29,  1.38s/file, ✅ prev tds 6.pdf (vendor_invoice, 0.90, 2p)]2025-08-06 23:00:04,295 - INFO - [CLASSIFY] Priviledge.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 23:00:04,295 - INFO - [CLASSIFY] awb_157_86944712#pos_26710#014401#022015.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:04,295 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  87%|████████▋ | 435/500 [10:46<01:29,  1.38s/file, ✅ Priviledge.pdf (vendor_invoice, 1.00, 1p)]Processing 500 files - Classification:  87%|████████▋ | 436/500 [10:46<01:30,  1.41s/file, ✅ Priviledge.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 23:00:04,368 - INFO - [CLASSIFY] BOA_18 DEc.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 23:00:04,368 - INFO - [CLASSIFY] CGL.pdf - Attempt 1/3 (Total pages: 71)
+2025-08-06 23:00:04,368 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  87%|████████▋ | 436/500 [10:47<01:30,  1.41s/file, ✅ BOA_18 DEc.pdf (irrelevant, 0.95, 1p)]    2025-08-06 23:00:05,786 - INFO - [CLASSIFY] Kalpana Ojha - Odisha Office_cust_1745346422.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 23:00:05,787 - INFO - [CLASSIFY] Full & Final _KANDULA RANADHEER.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:05,788 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  87%|████████▋ | 437/500 [10:48<01:28,  1.41s/file, ✅ Kalpana Ojha - Odisha Office_cust_1745346422.pdf (irrelevant, 1.00, 6p)]Processing 500 files - Classification:  88%|████████▊ | 438/500 [10:48<01:08,  1.11s/file, ✅ Kalpana Ojha - Odisha Office_cust_1745346422.pdf (irrelevant, 1.00, 6p)]2025-08-06 23:00:05,986 - INFO - [CLASSIFY] CBIPL-ESI-Challan Receipt-June-2017_cust_1745346475.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 23:00:05,986 - INFO - [CLASSIFY] Siddhant Jain-Pay Slip-May18-FFS_cust_1745346499.PDF - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:05,986 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  88%|████████▊ | 438/500 [10:48<01:08,  1.11s/file, ✅ CBIPL-ESI-Challan Receipt-June-2017_cust_1745346475.pdf (vendor_invoice, 0.95, 1p)]Processing 500 files - Classification:  88%|████████▊ | 439/500 [10:48<00:54,  1.13file/s, ✅ CBIPL-ESI-Challan Receipt-June-2017_cust_1745346475.pdf (vendor_invoice, 0.95, 1p)]2025-08-06 23:00:08,433 - INFO - [CLASSIFY] Draft CARO report_cust_1745346380.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 23:00:08,433 - INFO - [CLASSIFY] 4262_001_cust_1745346383.pdf - Attempt 1/3 (Total pages: 34)
+2025-08-06 23:00:08,434 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  88%|████████▊ | 439/500 [10:51<00:54,  1.13file/s, ✅ Draft CARO report_cust_1745346380.pdf (irrelevant, 0.95, 3p)]                      Processing 500 files - Classification:  88%|████████▊ | 440/500 [10:51<01:17,  1.29s/file, ✅ Draft CARO report_cust_1745346380.pdf (irrelevant, 0.95, 3p)]2025-08-06 23:00:12,427 - INFO - [CLASSIFY] 3796_001.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 23:00:12,427 - INFO - [CLASSIFY] Prvi 14.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 23:00:12,428 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  88%|████████▊ | 440/500 [10:55<01:17,  1.29s/file, ✅ 3796_001.pdf (vendor_invoice, 0.95, 8p)]                     Processing 500 files - Classification:  88%|████████▊ | 441/500 [10:55<01:59,  2.02s/file, ✅ 3796_001.pdf (vendor_invoice, 0.95, 8p)]2025-08-06 23:00:13,246 - INFO - [CLASSIFY] TIN NUMBER_cust_1745346377.pdf - Success: irrelevant (confidence: 1.00)
+2025-08-06 23:00:13,247 - INFO - [CLASSIFY] DLF Cyber City - Gurgaon Office.pdf - Attempt 1/3 (Total pages: 59)
+2025-08-06 23:00:13,247 - INFO - AFC is enabled with max remote calls: 10.
+2025-08-06 23:00:13,262 - INFO - [CLASSIFY] Paul Boeckx New Pass port_1.pdf - Success: irrelevant (confidence: 1.00)
+Processing 500 files - Classification:  88%|████████▊ | 441/500 [10:55<01:59,  2.02s/file, ✅ TIN NUMBER_cust_1745346377.pdf (irrelevant, 1.00, 2p)]Processing 500 files - Classification:  88%|████████▊ | 442/500 [10:55<01:37,  1.69s/file, ✅ TIN NUMBER_cust_1745346377.pdf (irrelevant, 1.00, 2p)]2025-08-06 23:00:13,263 - INFO - [CLASSIFY] FF10073ABIINDhyd150224dev.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:13,264 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  88%|████████▊ | 442/500 [10:55<01:37,  1.69s/file, ✅ Paul Boeckx New Pass port_1.pdf (irrelevant, 1.00, 1p)]2025-08-06 23:00:14,598 - INFO - [CLASSIFY] 4185_001.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 23:00:14,598 - INFO - [CLASSIFY] Expat_cust_1745346485.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:14,598 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  89%|████████▊ | 443/500 [10:57<01:36,  1.69s/file, ✅ 4185_001.pdf (vendor_invoice, 1.00, 8p)]               Processing 500 files - Classification:  89%|████████▉ | 444/500 [10:57<01:09,  1.24s/file, ✅ 4185_001.pdf (vendor_invoice, 1.00, 8p)]2025-08-06 23:00:15,941 - INFO - [CLASSIFY] Siddhant Jain-Pay Slip-May18-FFS_cust_1745346499.PDF - Success: irrelevant (confidence: 1.00)
+2025-08-06 23:00:15,942 - INFO - [CLASSIFY] Invoice 148_15_cust_1745346446.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:15,943 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  89%|████████▉ | 444/500 [10:58<01:09,  1.24s/file, ✅ Siddhant Jain-Pay Slip-May18-FFS_cust_1745346499.PDF (irrelevant, 1.00, 1p)]Processing 500 files - Classification:  89%|████████▉ | 445/500 [10:58<01:09,  1.26s/file, ✅ Siddhant Jain-Pay Slip-May18-FFS_cust_1745346499.PDF (irrelevant, 1.00, 1p)]2025-08-06 23:00:16,255 - INFO - [CLASSIFY] awb_157_86944712#pos_26710#014401#022015.pdf - Success: vendor_invoice (confidence: 1.00)
+2025-08-06 23:00:16,256 - INFO - [CLASSIFY] 265.16_cust_1745346428.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:16,256 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  89%|████████▉ | 445/500 [10:58<01:09,  1.26s/file, ✅ awb_157_86944712#pos_26710#014401#022015.pdf (vendor_invoice, 1.00, 1p)]    Processing 500 files - Classification:  89%|████████▉ | 446/500 [10:58<00:55,  1.02s/file, ✅ awb_157_86944712#pos_26710#014401#022015.pdf (vendor_invoice, 1.00, 1p)]2025-08-06 23:00:18,148 - INFO - [CLASSIFY] Crown Beer Ledger_cust_1745346500.pdf - Success: vendor_invoice (confidence: 0.95)
+2025-08-06 23:00:18,148 - INFO - [CLASSIFY] 8769147.pdf - Attempt 1/3 (Total pages: 2)
+2025-08-06 23:00:18,149 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  89%|████████▉ | 446/500 [11:00<00:55,  1.02s/file, ✅ Crown Beer Ledger_cust_1745346500.pdf (vendor_invoice, 0.95, 2p)]       Processing 500 files - Classification:  89%|████████▉ | 447/500 [11:00<01:06,  1.25s/file, ✅ Crown Beer Ledger_cust_1745346500.pdf (vendor_invoice, 0.95, 2p)]2025-08-06 23:00:18,779 - WARNING - [CLASSIFY] Full & Final _KANDULA RANADHEER.pdf - JSON malformed, attempting repair: Expecting ',' delimiter: line 10 column 37 (char 257)
+2025-08-06 23:00:18,780 - INFO - [CLASSIFY] Full & Final _KANDULA RANADHEER.pdf - JSON repair successful
+2025-08-06 23:00:18,780 - INFO - [CLASSIFY] Full & Final _KANDULA RANADHEER.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 23:00:18,781 - INFO - [CLASSIFY] 3922_001.pdf - Attempt 1/3 (Total pages: 34)
+2025-08-06 23:00:18,781 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  89%|████████▉ | 447/500 [11:01<01:06,  1.25s/file, ✅ Full & Final _KANDULA RANADHEER.pdf (irrelevant, 0.95, 1p)]      Processing 500 files - Classification:  90%|████████▉ | 448/500 [11:01<00:56,  1.08s/file, ✅ Full & Final _KANDULA RANADHEER.pdf (irrelevant, 0.95, 1p)]2025-08-06 23:00:23,485 - INFO - [CLASSIFY] CGL.pdf - Success: irrelevant (confidence: 0.95)
+2025-08-06 23:00:23,486 - INFO - [CLASSIFY] getFullBill.pdf - Attempt 1/3 (Total pages: 1)
+2025-08-06 23:00:23,486 - INFO - AFC is enabled with max remote calls: 10.
+Processing 500 files - Classification:  90%|████████▉ | 448/500 [11:06<00:56,  1.08s/file, ✅ CGL.pdf (irrelevant, 0.95, 71p)]                           Processing 500 files - Classification:  90%|████████▉ | 449/500 [11:06<01:47,  2.11s/file, ✅ CGL.pdf (irrelevant, 0.95, 71p)]

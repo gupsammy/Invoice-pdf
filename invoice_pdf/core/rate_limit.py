@@ -4,13 +4,14 @@ import logging
 import random
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import TypeVar
+from types import TracebackType
+from typing import Any, TypeVar
 
 try:
     import anyio
 except ImportError:
     # Fallback to asyncio if anyio is not available
-    anyio = None
+    anyio = None  # type: ignore[assignment]
 
 T = TypeVar("T")
 
@@ -42,7 +43,7 @@ class CapacityLimiter:
         else:
             self._semaphore = asyncio.Semaphore(total_tokens)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "CapacityLimiter":
         """Async context manager entry."""
         if anyio:
             await self._limiter.__aenter__()
@@ -51,7 +52,7 @@ class CapacityLimiter:
         self._available -= 1  # Track token acquisition
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         """Async context manager exit."""
         if anyio:
             await self._limiter.__aexit__(exc_type, exc_val, exc_tb)
@@ -63,14 +64,14 @@ class CapacityLimiter:
     def available_tokens(self) -> int:
         """Get available tokens/capacity."""
         if anyio:
-            return self._limiter.available_tokens
+            return int(self._limiter.available_tokens)  # Ensure int return
         return self._available  # Use our tracking, not private attribute
 
     @property
     def borrowed_tokens(self) -> int:
         """Get borrowed tokens/capacity."""
         if anyio:
-            return self._limiter.borrowed_tokens
+            return int(self._limiter.borrowed_tokens)  # Ensure int return
         return self.total_tokens - self._available  # Use our tracking
 
 
@@ -157,11 +158,11 @@ async def retry_with_backoff(
     raise RetryError(operation_name or "operation", Exception("Unknown error"), max_retries)
 
 
-def with_capacity_limit(limiter: CapacityLimiter):
+def with_capacity_limit(limiter: CapacityLimiter) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
     """Decorator to apply capacity limiting to async functions."""
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> T:
+        async def wrapper(*args: Any, **kwargs: Any) -> T:
             async with limiter:
                 return await func(*args, **kwargs)
         return wrapper
@@ -175,12 +176,12 @@ def with_retry(
     jitter_range: float = 3.0,
     retry_exceptions: tuple = (Exception,),
     operation_name: str | None = None
-):
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
     """Decorator to apply retry logic to async functions."""
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> T:
-            async def operation():
+        async def wrapper(*args: Any, **kwargs: Any) -> T:
+            async def operation() -> T:
                 return await func(*args, **kwargs)
 
             name = operation_name or func.__name__
@@ -231,7 +232,7 @@ class RateLimitedExecutor:
         retry_exceptions: tuple = (Exception,)
     ) -> T:
         """Execute operation with both capacity limiting and retry logic."""
-        async def limited_operation():
+        async def limited_operation() -> T:
             async with self.limiter:
                 return await operation()
 
@@ -247,7 +248,7 @@ class RateLimitedExecutor:
         )
 
     @property
-    def stats(self) -> dict:
+    def stats(self) -> dict[str, int]:
         """Get current executor statistics."""
         return {
             "available_capacity": self.limiter.available_tokens,
