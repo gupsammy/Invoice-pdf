@@ -34,6 +34,9 @@ from utilities.streaming_csv import StreamingCSVWriter
 # Import SQLite manifest for resumable processing
 from utilities.manifest import ProcessingManifest
 
+# Import TUI for interactive monitoring
+from utilities.tui import run_tui_monitor
+
 # ===========================
 # ENHANCED CONFIGURATION CONSTANTS
 # ===========================
@@ -99,6 +102,11 @@ pdf_fd_semaphore = None
 # Module-level processing manifest for resumable operations
 # Will be initialized in main()
 processing_manifest = None
+
+# Module-level pause/resume events for TUI control
+# Will be initialized when TUI is enabled
+pause_event = None
+shutdown_event = None
 
 def chunker(seq, n):
     """
@@ -234,7 +242,7 @@ async def classify_document_async(
     pdf_path_obj = Path(pdf_path)
     
     # Check manifest to see if already classified (when resume mode is active)
-    global processing_manifest
+    global processing_manifest, pause_event
     if processing_manifest:
         # Get resume queues to check if this file needs classification
         classify_list, _ = processing_manifest.get_resume_queues([pdf_path])
@@ -242,6 +250,10 @@ async def classify_document_async(
             # Already classified, skip
             logging.debug(f"[CLASSIFY] {pdf_path_obj.name} - Already classified, skipping")
             return None
+    
+    # Wait for pause event (allow processing to continue)
+    if pause_event:
+        await pause_event.wait()
     
     try:
         # Get total page count - catch preprocessing errors
@@ -410,7 +422,7 @@ async def extract_document_data_async(
     pdf_path_obj = Path(pdf_path)
     
     # Check manifest to see if already extracted (when resume mode is active)
-    global processing_manifest
+    global processing_manifest, pause_event
     if processing_manifest:
         # Get resume queues to check if this file needs extraction
         _, extract_list = processing_manifest.get_resume_queues([pdf_path])
@@ -418,6 +430,10 @@ async def extract_document_data_async(
             # Already extracted, skip
             logging.debug(f"[EXTRACT] {pdf_path_obj.name} - Already extracted, skipping")
             return None
+    
+    # Wait for pause event (allow processing to continue)
+    if pause_event:
+        await pause_event.wait()
     
     # Check page count - only process files with ≤20 pages (or first 20 pages if >20)
     total_pages = await safe_get_pdf_page_count(pdf_path)
@@ -1851,7 +1867,7 @@ async def process_with_pipeline_overlap(
     
     return classification_results, extraction_results, failed_classification, failed_extraction
 
-async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None, resume_extraction=False, resume=False):
+async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None, resume_extraction=False, resume=False, no_tui=False):
     """
     Enhanced main 2-step processing function with improved accuracy and organization.
     Step 1: Classify documents using gemini-2.5-flash (first 7 pages)
@@ -1877,14 +1893,28 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     logging.info(f"🔒 PDF file descriptor semaphore initialized (limit: {PDF_FD_SEMAPHORE_LIMIT})")
     
     # Initialize processing manifest for resumable operations
-    global processing_manifest
+    global processing_manifest, pause_event, shutdown_event
     if resume:
         manifest_path = os.path.join(base_output_folder, "manifest.db")
         processing_manifest = ProcessingManifest(manifest_path)
         processing_manifest.connect()
         logging.info(f"📋 SQLite manifest initialized for resumable processing: {manifest_path}")
+        
+        # Initialize TUI for interactive monitoring
+        total_files = len(pdf_files) if pdf_files else 0
+        tui_result = await run_tui_monitor(processing_manifest, total_files, disable_tui=no_tui)
+        
+        if len(tui_result) == 3:  # TUI enabled
+            pause_event, shutdown_event, tui_task = tui_result
+        else:  # TUI disabled
+            pause_event, shutdown_event = tui_result
+            tui_task = None
+            
+        logging.info(f"🎛️  TUI and pause/resume controls initialized (TUI enabled: {not no_tui})")
     else:
         processing_manifest = None
+        pause_event = None
+        shutdown_event = None
     
     # Check if setup was successful
     if not pdf_files or client is None:
@@ -2178,6 +2208,8 @@ if __name__ == "__main__":
                        help='Resume extraction for files that failed/missed in previous run (skips classification)')
     parser.add_argument('--resume', action='store_true',
                        help='Resume processing using SQLite manifest (both classification and extraction)')
+    parser.add_argument('--no-tui', action='store_true',
+                       help='Disable interactive TUI for headless mode')
     parser.add_argument('--output', default=OUTPUT_FOLDER,
                        help=f'Output folder for results (default: {OUTPUT_FOLDER})')
     parser.add_argument('--logs', default=LOGS_FOLDER,
@@ -2226,7 +2258,8 @@ if __name__ == "__main__":
                 logs_folder=args.logs,
                 json_responses_folder=args.json_responses,
                 resume_extraction=args.resume_extraction,
-                resume=args.resume
+                resume=args.resume,
+                no_tui=args.no_tui
             ))
             folder_elapsed = time.time() - folder_start_time
             logging.info(f"✅ Folder {i}/{len(input_folders)} completed in {folder_elapsed:.2f} seconds: {folder}")
