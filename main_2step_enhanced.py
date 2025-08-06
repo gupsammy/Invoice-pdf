@@ -242,7 +242,7 @@ async def classify_document_async(
     pdf_path_obj = Path(pdf_path)
     
     # Check manifest to see if already classified (when resume mode is active)
-    global processing_manifest, pause_event
+    global processing_manifest, pause_event, shutdown_event
     if processing_manifest:
         # Get resume queues to check if this file needs classification
         classify_list, _ = processing_manifest.get_resume_queues([pdf_path])
@@ -250,6 +250,11 @@ async def classify_document_async(
             # Already classified, skip
             logging.debug(f"[CLASSIFY] {pdf_path_obj.name} - Already classified, skipping")
             return None
+    
+    # Check for shutdown request
+    if shutdown_event and shutdown_event.is_set():
+        logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Shutdown requested, skipping")
+        return None
     
     # Wait for pause event (allow processing to continue)
     if pause_event:
@@ -422,7 +427,7 @@ async def extract_document_data_async(
     pdf_path_obj = Path(pdf_path)
     
     # Check manifest to see if already extracted (when resume mode is active)
-    global processing_manifest, pause_event
+    global processing_manifest, pause_event, shutdown_event
     if processing_manifest:
         # Get resume queues to check if this file needs extraction
         _, extract_list = processing_manifest.get_resume_queues([pdf_path])
@@ -430,6 +435,11 @@ async def extract_document_data_async(
             # Already extracted, skip
             logging.debug(f"[EXTRACT] {pdf_path_obj.name} - Already extracted, skipping")
             return None
+    
+    # Check for shutdown request
+    if shutdown_event and shutdown_event.is_set():
+        logging.info(f"[EXTRACT] {pdf_path_obj.name} - Shutdown requested, skipping")
+        return None
     
     # Wait for pause event (allow processing to continue)
     if pause_event:
@@ -1986,6 +1996,11 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         
         try:
             for chunk_num, chunk in enumerate(chunks, 1):
+                # Check for shutdown request before processing each chunk
+                if shutdown_event and shutdown_event.is_set():
+                    logging.info(f"🛑 Shutdown requested, stopping after chunk {chunk_num-1}/{total_chunks}")
+                    break
+                
                 classified, extracted, failed_classify, failed_extract = await process_chunk_with_streaming_csv(
                     chunk, client, quota_semaphore, json_responses_folder,
                     classification_writer, vendor_writer, employee_writer,
@@ -2196,6 +2211,28 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     logging.info(f"   - Employee Extraction: {EMPLOYEE_EXTRACTION_CSV_FILE}")
     logging.info(f"   - Excel Report: {input_folder_name}_data.xlsx")
     logging.info(f"   - Summary Report: {input_folder_name}_summary.md")
+    
+    # ===========================
+    # CLEANUP TUI AND MANIFEST
+    # ===========================
+    
+    # Clean up TUI task if it was started
+    if 'tui_task' in locals() and tui_task:
+        try:
+            tui_task.cancel()
+            await tui_task
+        except asyncio.CancelledError:
+            pass  # Expected when cancelling
+        except Exception as e:
+            logging.debug(f"Error cleaning up TUI task: {e}")
+    
+    # Close manifest connection
+    if processing_manifest:
+        try:
+            processing_manifest.close()
+            logging.debug("📋 Manifest connection closed")
+        except Exception as e:
+            logging.debug(f"Error closing manifest: {e}")
 
 if __name__ == "__main__":
     # Parse command line arguments
