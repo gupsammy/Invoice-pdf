@@ -7,6 +7,8 @@ import shutil
 import asyncio
 import argparse
 import fitz  # PyMuPDF
+import gc  # For garbage collection in chunked processing
+import random  # For jitter in retry back-off
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 from dotenv import load_dotenv
@@ -17,6 +19,7 @@ from openpyxl.styles import Font, PatternFill
 # Import Google Generative AI
 from google import genai
 from google.genai import types
+import aiohttp
 
 # Import enhanced 2-step prompts v2
 from prompts_2step_enhanced_v2 import (
@@ -24,6 +27,9 @@ from prompts_2step_enhanced_v2 import (
     ENHANCED_EMPLOYEE_REIMBURSEMENT_EXTRACTION_PROMPT_V2,
     ENHANCED_VENDOR_INVOICE_EXTRACTION_PROMPT_V2
 )
+
+# Import streaming CSV writer for Phase 5 optimization
+from utilities.streaming_csv import StreamingCSVWriter
 
 # ===========================
 # ENHANCED CONFIGURATION CONSTANTS
@@ -46,8 +52,13 @@ LOG_FILE = "invoice_extraction_2step_enhanced.log"
 # Processing Configuration
 _MAX_RETRIES = 3
 _RETRY_DELAY_BASE_SECONDS = 10
-MAX_CONCURRENT_CLASSIFY = 10  # Faster for lightweight classification
-MAX_CONCURRENT_EXTRACT = 5    # Conservative for heavy extraction
+# Phase 1 Optimization: Single quota semaphore for API rate limiting
+QUOTA_LIMIT = 10  # Single-key AFC limit (combined for classification + extraction)
+PROCESSING_CHUNK_SIZE = int(os.getenv("PROCESSING_CHUNK_SIZE", "500"))
+# Phase 2 Optimization: Response dump control
+SAVE_RESPONSES = os.getenv("DEBUG_RESPONSES", "0") == "1"
+# Phase 4 Optimization: PDF file descriptor guard
+PDF_FD_SEMAPHORE_LIMIT = 50
 
 # Enhanced 2-Step Configuration
 MAX_CLASSIFICATION_PAGES = 7  # Increased from 5 to 7 pages
@@ -77,6 +88,44 @@ load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 if not API_KEY:
     raise ValueError("GEMINI_API_KEY not found in environment variables. Please set it in a .env file.")
+
+# Module-level PDF file descriptor semaphore (Phase 4 optimization)
+# Will be initialized in main()
+pdf_fd_semaphore = None
+
+def chunker(seq, n):
+    """
+    Phase 6 optimization: Split sequence into chunks of size n for memory-efficient processing.
+    
+    Args:
+        seq: Sequence to split into chunks
+        n: Chunk size
+        
+    Yields:
+        Chunks of the sequence
+    """
+    for i in range(0, len(seq), n):
+        yield seq[i:i+n]
+
+async def safe_get_pdf_page_count(pdf_path: str) -> int:
+    """Get PDF page count with file descriptor semaphore guard."""
+    global pdf_fd_semaphore
+    if pdf_fd_semaphore is None:
+        # Fallback to direct call if semaphore not initialized
+        return await asyncio.to_thread(get_pdf_page_count, pdf_path)
+    
+    async with pdf_fd_semaphore:
+        return await asyncio.to_thread(get_pdf_page_count, pdf_path)
+
+async def safe_extract_first_n_pages_pdf(pdf_path: str, max_pages: int) -> bytes:
+    """Extract PDF pages with file descriptor semaphore guard."""
+    global pdf_fd_semaphore
+    if pdf_fd_semaphore is None:
+        # Fallback to direct call if semaphore not initialized
+        return await asyncio.to_thread(extract_first_n_pages_pdf, pdf_path, max_pages)
+    
+    async with pdf_fd_semaphore:
+        return await asyncio.to_thread(extract_first_n_pages_pdf, pdf_path, max_pages)
 
 def get_pdf_page_count(pdf_path: str) -> int:
     """Get the total number of pages in a PDF file."""
@@ -180,7 +229,7 @@ async def classify_document_async(
     try:
         # Get total page count - catch preprocessing errors
         try:
-            total_pages = get_pdf_page_count(pdf_path)
+            total_pages = await safe_get_pdf_page_count(pdf_path)
             if total_pages == 0:
                 error_msg = "Unable to read PDF or empty PDF"
                 logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
@@ -190,9 +239,9 @@ async def classify_document_async(
             logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
             return create_preprocessing_failure_result(pdf_path, error_msg)
         
-        # Extract first 7 pages - catch preprocessing errors
+        # Extract first 7 pages - catch preprocessing errors (Phase 4: thread-off PDF slicing)
         try:
-            pdf_bytes = extract_first_n_pages_pdf(pdf_path, MAX_CLASSIFICATION_PAGES)
+            pdf_bytes = await safe_extract_first_n_pages_pdf(pdf_path, MAX_CLASSIFICATION_PAGES)
         except Exception as e:
             error_msg = f"Failed to extract PDF pages: {str(e)}"
             logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
@@ -219,12 +268,16 @@ async def classify_document_async(
                         config=config
                     )
                     
-                    # Save response for debugging
+                    # Save response for debugging (controlled by DEBUG_RESPONSES flag)
+                    success = False  # Will be set based on parsing success
                     classification_log_filename = f"{pdf_path_obj.stem}_classification_attempt_{attempt+1}.txt"
                     classification_log_path = os.path.join(json_responses_folder, "classification", classification_log_filename)
-                    os.makedirs(os.path.dirname(classification_log_path), exist_ok=True)
-                    with open(classification_log_path, 'w', encoding='utf-8') as f:
-                        f.write(response.text)
+                    
+                    # Save response only when DEBUG_RESPONSES=1 or on failure
+                    def save_classification_response():
+                        os.makedirs(os.path.dirname(classification_log_path), exist_ok=True)
+                        with open(classification_log_path, 'w', encoding='utf-8') as f:
+                            f.write(response.text)
                     
                     # Parse JSON response with robust error handling
                     resp_txt = response.text
@@ -235,22 +288,26 @@ async def classify_document_async(
                         if any(err in resp_txt for err in ["502", "Service Unavailable", "server error"]):
                             raise RuntimeError("Transient upstream error – will retry")
                         logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Unparsable response: {resp_txt[:120]}")
+                        save_classification_response()  # Save on failure
                         return None
                     
                     try:
-                        classification_data = json.loads(resp_txt[json_start:json_end])
+                        # Phase 8: Cache JSON string once for both parsing attempts
+                        json_str = resp_txt[json_start:json_end]
+                        classification_data = json.loads(json_str)
                     except json.JSONDecodeError as json_error:
                         # Try to fix common JSON malformations
                         logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - JSON malformed, attempting repair: {str(json_error)}")
                         try:
                             import re
-                            json_str = resp_txt[json_start:json_end]
+                            # json_str already cached above
                             # Fix common issue: "text" (extra text) -> "text"
                             fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
                             classification_data = json.loads(fixed_json)
                             logging.info(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair successful")
                         except json.JSONDecodeError:
                             logging.error(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair failed")
+                            save_classification_response()  # Save on failure
                             raise json_error
                     
                     # Add metadata
@@ -263,6 +320,11 @@ async def classify_document_async(
                     classification = classification_data.get('classification', 'unknown')
                     confidence = classification_data.get('confidence', 0)
                     logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Success: {classification} (confidence: {confidence:.2f})")
+                    
+                    # Save response only if DEBUG_RESPONSES is enabled (success case)
+                    if SAVE_RESPONSES:
+                        save_classification_response()
+                    
                     return classification_data
                     
                 except json.JSONDecodeError as jde:
@@ -270,8 +332,11 @@ async def classify_document_async(
                     return None
                 except Exception as exc:
                     if attempt < _MAX_RETRIES - 1:
-                        delay = _RETRY_DELAY_BASE_SECONDS * (2 ** attempt)
-                        logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay}s...")
+                        # Phase 8: Add jitter to retry back-off
+                        base_delay = min(10, 2 ** attempt)
+                        jitter = random.uniform(0, 3)
+                        delay = base_delay + jitter
+                        logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay:.1f}s...")
                         await asyncio.sleep(delay)
                         continue
                     logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Exhausted retries: {str(exc)[:150]}")
@@ -304,7 +369,7 @@ async def extract_document_data_async(
     pdf_path_obj = Path(pdf_path)
     
     # Check page count - only process files with ≤20 pages (or first 20 pages if >20)
-    total_pages = get_pdf_page_count(pdf_path)
+    total_pages = await safe_get_pdf_page_count(pdf_path)
     process_full_file = total_pages <= MAX_EXTRACTION_PAGES
     
     if total_pages > MAX_EXTRACTION_PAGES:
@@ -324,8 +389,8 @@ async def extract_document_data_async(
         if process_full_file:
             pdf_bytes = pdf_path_obj.read_bytes()
         else:
-            # Extract first 20 pages for oversized files
-            pdf_bytes = extract_first_n_pages_pdf(pdf_path, MAX_EXTRACTION_PAGES)
+            # Extract first 20 pages for oversized files (Phase 4: thread-off PDF slicing)
+            pdf_bytes = await safe_extract_first_n_pages_pdf(pdf_path, MAX_EXTRACTION_PAGES)
         
         contents = [
             types.Part.from_bytes(
@@ -349,12 +414,16 @@ async def extract_document_data_async(
                     )
                     
                     # Save response for debugging in appropriate subfolder
+                    # Save response for debugging (controlled by DEBUG_RESPONSES flag)
                     extraction_log_filename = f"{pdf_path_obj.stem}_extraction_{document_type}_attempt_{attempt+1}.txt"
                     extraction_subfolder = os.path.join(json_responses_folder, document_type)
-                    os.makedirs(extraction_subfolder, exist_ok=True)
                     extraction_log_path = os.path.join(extraction_subfolder, extraction_log_filename)
-                    with open(extraction_log_path, 'w', encoding='utf-8') as f:
-                        f.write(response.text)
+                    
+                    # Save response only when DEBUG_RESPONSES=1 or on failure
+                    def save_extraction_response():
+                        os.makedirs(extraction_subfolder, exist_ok=True)
+                        with open(extraction_log_path, 'w', encoding='utf-8') as f:
+                            f.write(response.text)
                     
                     # Parse JSON response with robust error handling
                     resp_txt = response.text
@@ -365,22 +434,26 @@ async def extract_document_data_async(
                         if any(err in resp_txt for err in ["502", "Service Unavailable", "server error"]):
                             raise RuntimeError("Transient upstream error – will retry")
                         logging.error(f"[EXTRACT] {pdf_path_obj.name} - Unparsable response: {resp_txt[:120]}")
+                        save_extraction_response()  # Save on failure
                         return None
                     
                     try:
-                        extraction_data = json.loads(resp_txt[json_start:json_end])
+                        # Phase 8: Cache JSON string once for both parsing attempts
+                        json_str = resp_txt[json_start:json_end]
+                        extraction_data = json.loads(json_str)
                     except json.JSONDecodeError as json_error:
                         # Try to fix common JSON malformations
                         logging.warning(f"[EXTRACT] {pdf_path_obj.name} - JSON malformed, attempting repair: {str(json_error)}")
                         try:
                             import re
-                            json_str = resp_txt[json_start:json_end]
+                            # json_str already cached above
                             # Fix common issue: "text" (extra text) -> "text"
                             fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
                             extraction_data = json.loads(fixed_json)
                             logging.info(f"[EXTRACT] {pdf_path_obj.name} - JSON repair successful")
                         except json.JSONDecodeError:
                             logging.error(f"[EXTRACT] {pdf_path_obj.name} - JSON repair failed")
+                            save_extraction_response()  # Save on failure
                             raise json_error
                     
                     # Add metadata
@@ -391,6 +464,11 @@ async def extract_document_data_async(
                     extraction_data["total_pages_in_pdf"] = total_pages
                     
                     logging.info(f"[EXTRACT] {pdf_path_obj.name} - Success ({document_type})")
+                    
+                    # Save response only if DEBUG_RESPONSES is enabled (success case)
+                    if SAVE_RESPONSES:
+                        save_extraction_response()
+                    
                     return extraction_data
                     
                 except json.JSONDecodeError as jde:
@@ -398,8 +476,11 @@ async def extract_document_data_async(
                     return None
                 except Exception as exc:
                     if attempt < _MAX_RETRIES - 1:
-                        delay = _RETRY_DELAY_BASE_SECONDS * (2 ** attempt)
-                        logging.warning(f"[EXTRACT] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay}s...")
+                        # Phase 8: Add jitter to retry back-off
+                        base_delay = min(10, 2 ** attempt)
+                        jitter = random.uniform(0, 3)
+                        delay = base_delay + jitter
+                        logging.warning(f"[EXTRACT] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay:.1f}s...")
                         await asyncio.sleep(delay)
                         continue
                     logging.error(f"[EXTRACT] {pdf_path_obj.name} - Exhausted retries: {str(exc)[:150]}")
@@ -965,6 +1046,35 @@ def get_failed_files_csv_config():
     
     return {"fieldnames": fieldnames, "row_mapper": row_mapper}
 
+def get_vendor_extraction_csv_config():
+    """Configuration for vendor extraction results CSV."""
+    fieldnames = [
+        "File Name", "File Path", "Document Type", "Readable", "Contains Invoices",
+        "Multiple Documents", "Orientation Issues", "Data Source", "Issuer", 
+        "Consignor", "Consignee", "Vendor Name", "Original Vendor Name", 
+        "Invoice Type", "PAN", "Registration Numbers", "Invoice Date", 
+        "Document Number", "Invoice Number", "Description", "Basic Amount", 
+        "Tax Amount", "Total Amount", "Currency Code", "Original Amount", 
+        "Exchange Rate", "Amount Calculated", "Calculation Method", "Is Main Invoice",
+        "Total Pages In PDF", "Page Numbers", "Processing Notes"
+    ]
+    return {"fieldnames": fieldnames}
+
+def get_employee_extraction_csv_config():
+    """Configuration for employee extraction results CSV."""
+    fieldnames = [
+        "File Name", "File Path", "Document Type", "Employee Code", "Employee Name",
+        "Employee Designation", "Reporting Manager", "Department", "Team",
+        "Travel Dates From", "Travel Dates To", "Travel Duration Days", 
+        "Travel Purpose", "Travel Description", "Project Worked For",
+        "Location/City", "Transport Type", "Invoice Type", "Invoice Date",
+        "Invoice Number", "Vendor Name", "Description", "Basic Amount",
+        "Tax Amount", "Total Amount", "Currency Code", "Original Amount",
+        "Exchange Rate", "Amount Calculated", "Calculation Method", "Is Main Invoice",
+        "Total Pages In PDF", "Page Numbers", "Processing Notes"
+    ]
+    return {"fieldnames": fieldnames}
+
 def create_worksheet(workbook, sheet_name: str, headers: List[str], data_rows: List[List], header_color: str = "366092"):
     """
     Helper function to create a worksheet with headers and data.
@@ -1388,7 +1498,7 @@ async def setup_processing_environment(
     Set up the processing environment including folders, logging, file discovery, and client.
     
     Returns:
-        Tuple of (output_folder, json_responses_folder, pdf_files, client, classify_semaphore, extract_semaphore)
+        Tuple of (output_folder, json_responses_folder, pdf_files, client, quota_semaphore)
     """
     # Create dynamic folder structure
     output_folder, json_responses_folder = create_dynamic_output_folders(
@@ -1450,19 +1560,25 @@ async def setup_processing_environment(
     logging.info(f"📁 Output folder: {output_folder}")
     logging.info(f"🗂️  JSON responses: {json_responses_folder}")
     
-    # Initialize genai client
+    # Initialize genai client with aiohttp transport (Phase 3 optimization)
+    http_options = types.HttpOptions(
+        async_client_args={
+            "connector": aiohttp.TCPConnector(limit=50, limit_per_host=10),
+            "timeout": aiohttp.ClientTimeout(total=60),
+        }
+    )
+    
     if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true":
-        client = genai.Client()
-        logging.info("🔐 Using Vertex AI with Application Default Credentials")
+        client = genai.Client(http_options=http_options)
+        logging.info("🔐 Using Vertex AI with Application Default Credentials + aiohttp transport")
     else:
-        client = genai.Client(api_key=API_KEY)
-        logging.info("🔐 Using regular Gemini API with API key")
+        client = genai.Client(api_key=API_KEY, http_options=http_options)
+        logging.info("🔐 Using regular Gemini API with API key + aiohttp transport")
     
-    # Create separate semaphores for different processing stages
-    classify_semaphore = asyncio.Semaphore(MAX_CONCURRENT_CLASSIFY)
-    extract_semaphore = asyncio.Semaphore(MAX_CONCURRENT_EXTRACT)
+    # Create single quota semaphore for API rate limiting (Phase 1 optimization)
+    quota_semaphore = asyncio.Semaphore(QUOTA_LIMIT)
     
-    return output_folder, json_responses_folder, pdf_files, client, classify_semaphore, extract_semaphore
+    return output_folder, json_responses_folder, pdf_files, client, quota_semaphore
 
 def get_missing_extraction_files(output_folder: str, json_responses_folder: str) -> Tuple[List[Tuple[str, str]], int, int]:
     """
@@ -1499,31 +1615,27 @@ def get_missing_extraction_files(output_folder: str, json_responses_folder: str)
     # Check which files have already been extracted
     extracted_files = set()
     
-    # Check vendor_invoice extractions
+    # Check vendor_invoice extractions (Phase 7: Fixed glob pattern)
     vendor_dir = os.path.join(json_responses_folder, "vendor_invoice")
     if os.path.exists(vendor_dir):
-        for filename in os.listdir(vendor_dir):
-            if filename.endswith('_extraction_vendor_invoice_attempt_1.txt'):
-                # Extract original filename from extraction filename
-                original_name = filename.replace('_extraction_vendor_invoice_attempt_1.txt', '')
-                # Find matching file path in eligible files
-                for file_path in eligible_files:
-                    if os.path.basename(file_path).replace('.pdf', '') == original_name.replace('.pdf', ''):
-                        extracted_files.add(file_path)
-                        break
+        import fnmatch
+        for file_path in eligible_files:
+            if eligible_files[file_path] == 'vendor_invoice':
+                stem = Path(file_path).stem
+                pattern = f"{stem}_extraction_vendor_invoice_attempt_*.txt"
+                if any(fnmatch.filter(os.listdir(vendor_dir), pattern)):
+                    extracted_files.add(file_path)
     
-    # Check employee_t&e extractions  
+    # Check employee_t&e extractions (Phase 7: Fixed glob pattern)
     employee_dir = os.path.join(json_responses_folder, "employee_t&e")
     if os.path.exists(employee_dir):
-        for filename in os.listdir(employee_dir):
-            if filename.endswith('_extraction_employee_t&e_attempt_1.txt'):
-                # Extract original filename from extraction filename
-                original_name = filename.replace('_extraction_employee_t&e_attempt_1.txt', '')
-                # Find matching file path in eligible files
-                for file_path in eligible_files:
-                    if os.path.basename(file_path).replace('.pdf', '') == original_name.replace('.pdf', ''):
-                        extracted_files.add(file_path)
-                        break
+        import fnmatch
+        for file_path in eligible_files:
+            if eligible_files[file_path] == 'employee_t&e':
+                stem = Path(file_path).stem
+                pattern = f"{stem}_extraction_employee_t&e_attempt_*.txt"
+                if any(fnmatch.filter(os.listdir(employee_dir), pattern)):
+                    extracted_files.add(file_path)
     
     total_completed = len(extracted_files)
     logging.info(f"✅ Found {total_completed} files already extracted")
@@ -1537,6 +1649,134 @@ def get_missing_extraction_files(output_folder: str, json_responses_folder: str)
     logging.info(f"🔄 Found {len(missing_files)} files needing extraction ({total_eligible - total_completed} missing)")
     
     return missing_files, total_eligible, total_completed
+
+async def process_chunk_with_streaming_csv(
+    pdf_chunk: List[str], 
+    client: "genai.Client",
+    quota_semaphore: asyncio.Semaphore,
+    json_responses_folder: str,
+    classification_writer: StreamingCSVWriter,
+    vendor_writer: StreamingCSVWriter,
+    employee_writer: StreamingCSVWriter,
+    chunk_number: int,
+    total_chunks: int
+) -> Tuple[int, int, int, int]:
+    """
+    Process a chunk of PDF files with pipeline overlap and streaming CSV output.
+    
+    Returns:
+        Tuple of (classified_count, extracted_count, failed_classify_count, failed_extract_count)
+    """
+    logging.info(f"📦 Processing chunk {chunk_number}/{total_chunks} ({len(pdf_chunk)} files)")
+    
+    # Process this chunk with pipeline overlap
+    classification_results, extraction_results, failed_classification, failed_extraction = await process_with_pipeline_overlap(
+        pdf_chunk, client, quota_semaphore, json_responses_folder
+    )
+    
+    # Stream classification results to CSV immediately
+    for result in classification_results:
+        await classification_writer.write_row(result)
+    
+    # Stream extraction results to appropriate CSV files immediately
+    for result in extraction_results:
+        doc_type = result.get("document_type_processed", "")
+        if doc_type == "vendor_invoice":
+            await vendor_writer.write_row(result)
+        elif doc_type == "employee_t&e":
+            await employee_writer.write_row(result)
+    
+    logging.info(f"✅ Chunk {chunk_number} complete: {len(classification_results)} classified, {len(extraction_results)} extracted")
+    
+    return len(classification_results), len(extraction_results), len(failed_classification), len(failed_extraction)
+
+async def process_with_pipeline_overlap(
+    pdf_files: List[str],
+    client: "genai.Client",
+    quota_semaphore: asyncio.Semaphore,
+    json_responses_folder: str
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, str]], List[Dict[str, str]]]:
+    """
+    Process files with pipeline overlap: start extraction immediately as classification completes.
+    
+    Args:
+        pdf_files: List of PDF file paths to process
+        client: Shared genai client  
+        quota_semaphore: Single semaphore controlling all API calls
+        json_responses_folder: Folder to save JSON responses
+        
+    Returns:
+        Tuple of (classification_results, extraction_results, failed_classification, failed_extraction)
+    """
+    classification_results = []
+    extraction_results = []
+    failed_classification = []
+    failed_extraction = []
+    
+    # Use asyncio.Queue to stream classification results to extraction
+    extraction_queue = asyncio.Queue()
+    classification_done = asyncio.Event()
+    
+    async def classification_worker():
+        """Process all classifications and put relevant results in extraction queue"""
+        nonlocal classification_results, failed_classification
+        
+        # Process classification with retries using existing infrastructure 
+        classify_results, classify_failed = await process_with_retries(
+            pdf_files, client, quota_semaphore, json_responses_folder,
+            stage="classification", max_passes=3
+        )
+        
+        classification_results.extend(classify_results)
+        failed_classification.extend(classify_failed)
+        
+        # Queue relevant documents for extraction
+        for result in classify_results:
+            classification = result.get("classification", "")
+            if classification in ["employee_t&e", "vendor_invoice"]:
+                await extraction_queue.put((result["file_path"], classification))
+        
+        # Signal that classification is done
+        await extraction_queue.put(None)  # Sentinel value
+        classification_done.set()
+        
+    async def extraction_worker():
+        """Process extractions as they become available from classification"""
+        nonlocal extraction_results, failed_extraction
+        relevant_documents = []
+        
+        while True:
+            item = await extraction_queue.get()
+            if item is None:  # Sentinel - classification is done
+                break
+            relevant_documents.append(item)
+            
+            # Process in batches to avoid overwhelming the extraction pipeline
+            if len(relevant_documents) >= 50:  # Process in batches of 50
+                extract_results, extract_failed = await process_with_retries(
+                    relevant_documents, client, quota_semaphore, json_responses_folder,
+                    stage="extraction", max_passes=3
+                )
+                extraction_results.extend(extract_results)
+                failed_extraction.extend(extract_failed)
+                relevant_documents = []
+        
+        # Process any remaining documents
+        if relevant_documents:
+            extract_results, extract_failed = await process_with_retries(
+                relevant_documents, client, quota_semaphore, json_responses_folder,
+                stage="extraction", max_passes=3
+            )
+            extraction_results.extend(extract_results)
+            failed_extraction.extend(extract_failed)
+    
+    # Start both workers concurrently for pipeline overlap
+    await asyncio.gather(
+        classification_worker(),
+        extraction_worker()
+    )
+    
+    return classification_results, extraction_results, failed_classification, failed_extraction
 
 async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None, resume_extraction=False):
     """
@@ -1554,9 +1794,14 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     base_json_responses_folder = json_responses_folder or JSON_RESPONSES_FOLDER
     
     # Set up processing environment
-    output_folder, json_responses_folder, pdf_files, client, classify_semaphore, extract_semaphore = await setup_processing_environment(
+    output_folder, json_responses_folder, pdf_files, client, quota_semaphore = await setup_processing_environment(
         input_folder, base_output_folder, logs_folder, base_json_responses_folder, resume_extraction
     )
+    
+    # Initialize PDF file descriptor semaphore (Phase 4 optimization)
+    global pdf_fd_semaphore
+    pdf_fd_semaphore = asyncio.Semaphore(PDF_FD_SEMAPHORE_LIMIT)
+    logging.info(f"🔒 PDF file descriptor semaphore initialized (limit: {PDF_FD_SEMAPHORE_LIMIT})")
     
     # Check if setup was successful
     if not pdf_files or client is None:
@@ -1572,29 +1817,67 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         relevant_documents = pdf_files  # Already in the right format
         classification_results = []  # Not needed for resume mode
         failed_classification = []   # Not needed for resume mode
+        extraction_results = []      # Will be populated by extraction process
+        failed_extraction = []       # Will be populated by extraction process
         
         logging.info(f"📋 Loaded {len(relevant_documents)} files for extraction from previous classification")
         
     else:
         # ===========================
-        # STEP 1: ENHANCED CLASSIFICATION WITH RETRIES
+        # PHASE 6: CHUNKED PROCESSING WITH STREAMING CSV WRITERS
         # ===========================
         
-        logging.info(f"🏷️  Starting Step 1: Enhanced Document Classification ({len(pdf_files)} files)")
+        total_files = len(pdf_files)
+        chunk_size = PROCESSING_CHUNK_SIZE
+        chunks = list(chunker(pdf_files, chunk_size))
+        total_chunks = len(chunks)
         
-        classification_results, failed_classification = await process_with_retries(
-            pdf_files, client, classify_semaphore, json_responses_folder, 
-            stage="classification", max_passes=3
-        )
+        logging.info(f"📦 Starting Chunked Pipeline Processing ({total_files} files, {total_chunks} chunks of {chunk_size})")
+        logging.info("🏷️  Using streaming CSV writers for memory efficiency...")
         
-        # Save classification results
+        # Initialize streaming CSV writers
         classification_csv_path = os.path.join(output_folder, CLASSIFICATION_CSV_FILE)
-        save_results_to_csv(
-            classification_results, 
-            classification_csv_path, 
-            get_classification_csv_config(),
-            "classification results"
-        )
+        vendor_csv_path = os.path.join(output_folder, VENDOR_EXTRACTION_CSV_FILE)
+        employee_csv_path = os.path.join(output_folder, EMPLOYEE_EXTRACTION_CSV_FILE)
+        
+        classification_writer = StreamingCSVWriter(classification_csv_path, get_classification_csv_config()["fieldnames"])
+        vendor_writer = StreamingCSVWriter(vendor_csv_path, get_vendor_extraction_csv_config()["fieldnames"])
+        employee_writer = StreamingCSVWriter(employee_csv_path, get_employee_extraction_csv_config()["fieldnames"])
+        
+        # Process chunks with garbage collection between chunks
+        total_classified = total_extracted = total_failed_classify = total_failed_extract = 0
+        
+        try:
+            for chunk_num, chunk in enumerate(chunks, 1):
+                classified, extracted, failed_classify, failed_extract = await process_chunk_with_streaming_csv(
+                    chunk, client, quota_semaphore, json_responses_folder,
+                    classification_writer, vendor_writer, employee_writer,
+                    chunk_num, total_chunks
+                )
+                
+                total_classified += classified
+                total_extracted += extracted
+                total_failed_classify += failed_classify
+                total_failed_extract += failed_extract
+                
+                # Force garbage collection between chunks to free memory
+                if chunk_num < total_chunks:
+                    gc.collect()
+                    logging.info(f"🗑️  Memory cleanup after chunk {chunk_num}/{total_chunks}")
+        
+        finally:
+            # Close all streaming writers
+            classification_writer.close()
+            vendor_writer.close() 
+            employee_writer.close()
+            
+        logging.info(f"📊 Chunked processing complete: {total_classified} classified, {total_extracted} extracted")
+        
+        # For compatibility, create empty result lists (actual data already written to CSV)
+        classification_results = []
+        extraction_results = []
+        failed_classification = []
+        failed_extraction = []
     
     if not resume_extraction:
         # Enhanced classification summary (only for non-resume mode)
@@ -1625,58 +1908,44 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
             logging.info(f"   {page_range} pages: {count} files ({percentage:.1f}%)")
     
     # ===========================
-    # STEP 2: ENHANCED EXTRACTION WITH FILTERING
+    # EXTRACTION RESULTS HANDLING
     # ===========================
     
-    if not resume_extraction:
-        # Filter for relevant documents (all relevant docs, use first 20 pages for oversized)
-        relevant_documents = []
-        skipped_irrelevant = 0
-        skipped_processing_failed = 0
-        oversized_count = 0
+    if resume_extraction:
+        # Resume mode - process missing files
+        logging.info(f"💎 Step 2: Enhanced Extraction from {len(relevant_documents)} eligible documents")
+        logging.info(f"🔄 Resume mode: Processing {len(relevant_documents)} files needing extraction")
         
+        if not relevant_documents:
+            logging.info("No eligible documents found for extraction. Process complete.")
+            return
+        
+        extraction_results, failed_extraction = await process_with_retries(
+            relevant_documents, client, quota_semaphore, json_responses_folder,
+            stage="extraction", max_passes=3
+        )
+    else:
+        # Pipeline overlap mode - extraction_results already available
+        # Show processing statistics based on classification results
+        skipped_irrelevant = len([r for r in classification_results if r.get("classification") == "irrelevant"])
+        skipped_processing_failed = len([r for r in classification_results if r.get("classification") == "processing_failed"]) 
+        oversized_count = len([r for r in classification_results if r.get("total_pages_in_pdf", 0) > MAX_EXTRACTION_PAGES and r.get("classification") in ["employee_t&e", "vendor_invoice"]])
+        relevant_count = len([r for r in classification_results if r.get("classification") in ["employee_t&e", "vendor_invoice"]])
+        
+        logging.info(f"💎 Pipeline Processing Complete - {len(extraction_results)} documents extracted")
+        logging.info(f"⚡ Processing Statistics:")
+        logging.info(f"   📋 Irrelevant documents skipped: {skipped_irrelevant}")
+        logging.info(f"   💥 Processing failed documents skipped: {skipped_processing_failed}")
+        logging.info(f"   📚 Oversized files (using first {MAX_EXTRACTION_PAGES} pages): {oversized_count}")
+        logging.info(f"   💰 Total relevant documents processed: {relevant_count} files")
+        
+        # Log oversized files for reference
         for result in classification_results:
             classification = result.get("classification", "")
             total_pages = result.get("total_pages_in_pdf", 0)
             file_path = result["file_path"]
-            
-            if classification == "irrelevant":
-                skipped_irrelevant += 1
-                continue
-            elif classification == "processing_failed":
-                skipped_processing_failed += 1
-                continue
-            elif classification in ["employee_t&e", "vendor_invoice"]:
-                relevant_documents.append((file_path, classification))
-                if total_pages > MAX_EXTRACTION_PAGES:
-                    oversized_count += 1
-                logging.info(f"[PROCESS] {os.path.basename(file_path)} - Will use first {MAX_EXTRACTION_PAGES} pages ({total_pages} total pages)")
-    
-    logging.info(f"💎 Step 2: Enhanced Extraction from {len(relevant_documents)} eligible documents")
-    
-    if not resume_extraction:
-        # Only show processing info for non-resume mode 
-        logging.info(f"⚡ Processing Information:")
-        logging.info(f"   📋 Irrelevant documents skipped: {skipped_irrelevant}")
-        logging.info(f"   💥 Processing failed documents skipped: {skipped_processing_failed}")
-        logging.info(f"   📚 Oversized files (using first {MAX_EXTRACTION_PAGES} pages): {oversized_count}")
-        logging.info(f"   💰 Total relevant documents processing: {len(relevant_documents)} files")
-    else:
-        # Resume mode - show simpler info
-        logging.info(f"🔄 Resume mode: Processing {len(relevant_documents)} files needing extraction")
-    
-    if not relevant_documents:
-        logging.info("No eligible documents found for extraction. Process complete.")
-        return
-    
-    # ===========================
-    # STEP 2: ENHANCED EXTRACTION WITH RETRIES  
-    # ===========================
-    
-    extraction_results, failed_extraction = await process_with_retries(
-        relevant_documents, client, extract_semaphore, json_responses_folder,
-        stage="extraction", max_passes=3
-    )
+            if classification in ["employee_t&e", "vendor_invoice"] and total_pages > MAX_EXTRACTION_PAGES:
+                logging.info(f"[PROCESS] {os.path.basename(file_path)} - Used first {MAX_EXTRACTION_PAGES} pages ({total_pages} total pages)")
     
     # Note: Retries are now handled automatically within process_with_retries()
     
