@@ -1265,6 +1265,46 @@ def build_employee_rows(result: dict):
             "processing_notes": doc.get("processing_notes", "")
         }
 
+def read_csv_into_rows(file_path: str) -> List[List]:
+    """Utility to read a CSV file into a list of rows (including header)."""
+    import csv
+    rows = []
+    if not os.path.exists(file_path):
+        return rows
+    with open(file_path, 'r', newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            rows.append(row)
+    return rows
+
+
+def create_excel_from_csvs(output_folder: str, input_folder_name: str):
+    """Create an Excel workbook directly from the three streamed CSV files (chunked mode)."""
+    import openpyxl
+    csv_mapping = {
+        "Classification": CLASSIFICATION_CSV_FILE,
+        "Employee_T&E": EMPLOYEE_EXTRACTION_CSV_FILE,
+        "Vendor_Invoices": VENDOR_EXTRACTION_CSV_FILE,
+    }
+    workbook = openpyxl.Workbook()
+    # Remove default
+    workbook.remove(workbook.active)
+    for sheet_name, csv_name in csv_mapping.items():
+        csv_path = os.path.join(output_folder, csv_name)
+        rows = read_csv_into_rows(csv_path)
+        if not rows:
+            continue
+        ws = workbook.create_sheet(sheet_name)
+        for r_idx, row in enumerate(rows, 1):
+            for c_idx, value in enumerate(row, 1):
+                ws.cell(row=r_idx, column=c_idx, value=value)
+    if not workbook.worksheets:
+        return  # Nothing to save
+    excel_filename = f"{input_folder_name}_data.xlsx"
+    excel_path = os.path.join(output_folder, excel_filename)
+    workbook.save(excel_path)
+
+
 def create_worksheet(workbook, sheet_name: str, headers: List[str], data_rows: List[List], header_color: str = "366092"):
     """
     Helper function to create a worksheet with headers and data.
@@ -1290,6 +1330,35 @@ def create_worksheet(workbook, sheet_name: str, headers: List[str], data_rows: L
             ws.cell(row=row_idx, column=col, value=value)
     
     return ws
+
+def create_excel_from_csvs(classification_csv: str, employee_csv: str, vendor_csv: str, output_folder: str, input_folder_name: str):
+    """Create a simple Excel file by loading the three CSVs into separate worksheets.
+    This is used in chunked streaming mode where we don't keep all data in memory."""
+    import csv
+    excel_filename = f"{input_folder_name}_data.xlsx"
+    excel_path = os.path.join(output_folder, excel_filename)
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+
+    def add_sheet(csv_path: str, sheet_name: str, header_color: str):
+        if not os.path.exists(csv_path):
+            return
+        ws = wb.create_sheet(sheet_name)
+        with open(csv_path, newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for r_idx, row in enumerate(reader, 1):
+                for c_idx, value in enumerate(row, 1):
+                    cell = ws.cell(row=r_idx, column=c_idx, value=value)
+                    if r_idx == 1:
+                        cell.font = Font(bold=True)
+                        cell.fill = PatternFill(start_color=header_color, end_color=header_color, fill_type="solid")
+
+    add_sheet(classification_csv, "Classification", "366092")
+    add_sheet(employee_csv, "Employee_T&E", "70AD47")
+    add_sheet(vendor_csv, "Vendor_Invoices", "D97230")
+    wb.save(excel_path)
+    logging.info(f"Excel (CSV-based) report saved to {excel_path}")
+
 
 def create_excel_report(
     classification_results: List[Dict[str, Any]], 
@@ -2223,6 +2292,9 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
             employee_writer.close()
             
         logging.info(f"📊 Chunked processing complete: {total_classified} classified, {total_extracted} extracted")
+        # Track vendor / employee extraction counts from streaming writers
+        chunked_vendor_extracted = vendor_writer.rows_written
+        chunked_employee_extracted = employee_writer.rows_written
         
         # Initialize empty result arrays for compatibility with final reporting
         classification_results = []
@@ -2335,8 +2407,8 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         total_files = len(pdf_files)
         classified_files = total_classified
         extracted_files = total_extracted
-        vendor_extracted = len(vendor_results) if vendor_results else 0
-        employee_extracted = len(employee_results) if employee_results else 0
+        vendor_extracted = chunked_vendor_extracted if 'chunked_vendor_extracted' in locals() else 0
+        employee_extracted = chunked_employee_extracted if 'chunked_employee_extracted' in locals() else 0
         relevant_files = len(relevant_documents) if relevant_documents else extracted_files
     else:
         # Non-chunked mode - use the arrays
@@ -2436,6 +2508,7 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         # Chunked mode - create simplified reports since arrays are empty for memory efficiency
         logging.info("📊 Chunked mode: Creating simplified summary report...")
         elapsed_time = time.time() - start_time
+        # Create simplified markdown summary
         create_chunked_summary_report(
             output_folder,
             input_folder_name,
@@ -2447,6 +2520,9 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
             employee_extracted,
             elapsed_time
         )
+        # Also generate an Excel workbook from streamed CSVs
+        logging.info("📊 Creating Excel workbook from streamed CSVs (chunked mode)...")
+        create_excel_from_csvs(output_folder, input_folder_name)
     
     logging.info(f"📊 Enhanced results saved to {output_folder}/")
     logging.info(f"   - Classification: {CLASSIFICATION_CSV_FILE}")
