@@ -30,10 +30,23 @@ class TestProcessingManifest:
     def teardown_method(self):
         """Clean up test environment."""
         self.manifest.close()
-        # Clean up temp files
-        if os.path.exists(self.db_path):
-            os.remove(self.db_path)
-        os.rmdir(self.temp_dir)
+        # Clean up temp files (including SQLite WAL files)
+        import glob
+        db_pattern = self.db_path + '*'  # Matches .db, .db-wal, .db-shm
+        for db_file in glob.glob(db_pattern):
+            if os.path.exists(db_file):
+                try:
+                    os.remove(db_file)
+                except OSError:
+                    pass  # Ignore cleanup errors
+        
+        # Clean up temp directory
+        try:
+            os.rmdir(self.temp_dir)
+        except OSError:
+            # If directory is not empty, remove everything
+            import shutil
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     def test_database_initialization(self):
         """Test that database and table are created correctly."""
@@ -240,9 +253,23 @@ class TestConvenienceFunctions:
     def teardown_method(self):
         """Clean up test environment."""
         self.manifest.close()
-        if os.path.exists(self.db_path):
-            os.remove(self.db_path)
-        os.rmdir(self.temp_dir)
+        # Clean up temp files (including SQLite WAL files)
+        import glob
+        db_pattern = self.db_path + '*'  # Matches .db, .db-wal, .db-shm
+        for db_file in glob.glob(db_pattern):
+            if os.path.exists(db_file):
+                try:
+                    os.remove(db_file)
+                except OSError:
+                    pass  # Ignore cleanup errors
+        
+        # Clean up temp directory
+        try:
+            os.rmdir(self.temp_dir)
+        except OSError:
+            # If directory is not empty, remove everything
+            import shutil
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     def test_init_db(self):
         """Test the init_db convenience function."""
