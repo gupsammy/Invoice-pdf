@@ -7,7 +7,7 @@ import logging
 import shutil
 import asyncio
 import argparse
-import fitz  # PyMuPDF
+# PyMuPDF now imported in core.pdf_utils
 import gc  # For garbage collection in chunked processing
 import random  # For jitter in retry back-off
 from pathlib import Path
@@ -22,6 +22,13 @@ from config import Settings
 from logging_config import setup_logging
 from core.models import ClassificationResult, classification_result_to_dict
 from core.rate_limit import CapacityLimiter, retry_with_backoff
+from core.pdf_utils import (
+    get_page_count, 
+    extract_first_n_pages,
+    safe_get_page_count,
+    safe_extract_first_n_pages,
+    initialize_pdf_semaphore
+)
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
@@ -96,9 +103,7 @@ pass
 
 # Settings already initialized above
 
-# Module-level PDF file descriptor semaphore (Phase 4 optimization)
-# Will be initialized in main()
-pdf_fd_semaphore = None
+# PDF file descriptor semaphore now managed in core.pdf_utils module
 
 # Module-level processing manifest for resumable operations
 # Will be initialized in main()
@@ -123,72 +128,6 @@ def chunker(seq, n):
     for i in range(0, len(seq), n):
         yield seq[i:i+n]
 
-async def safe_get_pdf_page_count(pdf_path: str) -> int:
-    """Get PDF page count with file descriptor semaphore guard."""
-    global pdf_fd_semaphore
-    if pdf_fd_semaphore is None:
-        # Fallback to direct call if semaphore not initialized
-        return await asyncio.to_thread(get_pdf_page_count, pdf_path)
-    
-    async with pdf_fd_semaphore:
-        return await asyncio.to_thread(get_pdf_page_count, pdf_path)
-
-async def safe_extract_first_n_pages_pdf(pdf_path: str, max_pages: int) -> bytes:
-    """Extract PDF pages with file descriptor semaphore guard."""
-    global pdf_fd_semaphore
-    if pdf_fd_semaphore is None:
-        # Fallback to direct call if semaphore not initialized
-        return await asyncio.to_thread(extract_first_n_pages_pdf, pdf_path, max_pages)
-    
-    async with pdf_fd_semaphore:
-        return await asyncio.to_thread(extract_first_n_pages_pdf, pdf_path, max_pages)
-
-def get_pdf_page_count(pdf_path: str) -> int:
-    """Get the total number of pages in a PDF file."""
-    try:
-        doc = fitz.open(pdf_path)
-        page_count = len(doc)
-        doc.close()
-        return page_count
-    except Exception as e:
-        logging.error(f"Error getting page count for {pdf_path}: {str(e)}")
-        return 0
-
-def extract_first_n_pages_pdf(pdf_path: str, max_pages: int = MAX_CLASSIFICATION_PAGES) -> bytes:
-    """
-    Extract the first N pages from a PDF and return as bytes using optimized page slicing.
-    
-    Args:
-        pdf_path: Path to the PDF file
-        max_pages: Maximum number of pages to extract (default: 7)
-        
-    Returns:
-        PDF bytes containing only the first N pages
-    """
-    try:
-        # Open the source PDF
-        source_doc = fitz.open(pdf_path)
-        
-        # Determine pages to extract
-        pages_to_copy = min(len(source_doc), max_pages)
-        
-        if pages_to_copy == len(source_doc):
-            # If we need all pages, just return the original document as bytes
-            pdf_bytes = source_doc.tobytes()
-            source_doc.close()
-            return pdf_bytes
-        
-        # Create a new document and copy pages
-        new_doc = fitz.open()
-        new_doc.insert_pdf(source_doc, from_page=0, to_page=pages_to_copy-1)
-        pdf_bytes = new_doc.tobytes()
-        new_doc.close()
-        source_doc.close()
-        return pdf_bytes
-        
-    except Exception as e:
-        logging.error(f"Error extracting first {max_pages} pages from {pdf_path}: {str(e)}")
-        raise
 
 def create_preprocessing_failure_result(pdf_path: str, error_message: str) -> ClassificationResult:
     """
@@ -259,7 +198,7 @@ async def classify_document_async(
     try:
         # Get total page count - catch preprocessing errors
         try:
-            total_pages = await safe_get_pdf_page_count(pdf_path)
+            total_pages = await safe_get_page_count(pdf_path)
             if total_pages == 0:
                 error_msg = "Unable to read PDF or empty PDF"
                 logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
@@ -272,7 +211,7 @@ async def classify_document_async(
         
         # Extract first 7 pages - catch preprocessing errors (Phase 4: thread-off PDF slicing)
         try:
-            pdf_bytes = await safe_extract_first_n_pages_pdf(pdf_path, MAX_CLASSIFICATION_PAGES)
+            pdf_bytes = await safe_extract_first_n_pages(pdf_path, MAX_CLASSIFICATION_PAGES)
         except Exception as e:
             error_msg = f"Failed to extract PDF pages: {str(e)}"
             logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
@@ -445,7 +384,7 @@ async def extract_document_data_async(
         await pause_event.wait()
     
     # Check page count - only process files with ≤20 pages (or first 20 pages if >20)
-    total_pages = await safe_get_pdf_page_count(pdf_path)
+    total_pages = await safe_get_page_count(pdf_path)
     process_full_file = total_pages <= MAX_EXTRACTION_PAGES
     
     if total_pages > MAX_EXTRACTION_PAGES:
@@ -466,7 +405,7 @@ async def extract_document_data_async(
             pdf_bytes = pdf_path_obj.read_bytes()
         else:
             # Extract first 20 pages for oversized files (Phase 4: thread-off PDF slicing)
-            pdf_bytes = await safe_extract_first_n_pages_pdf(pdf_path, MAX_EXTRACTION_PAGES)
+            pdf_bytes = await safe_extract_first_n_pages(pdf_path, MAX_EXTRACTION_PAGES)
         
         contents = [
             types.Part.from_bytes(
@@ -2212,8 +2151,7 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     )
     
     # Initialize PDF file descriptor semaphore (Phase 4 optimization)
-    global pdf_fd_semaphore
-    pdf_fd_semaphore = CapacityLimiter(PDF_FD_SEMAPHORE_LIMIT)
+    initialize_pdf_semaphore(PDF_FD_SEMAPHORE_LIMIT)
     logging.info(f"🔒 PDF file descriptor semaphore initialized (limit: {PDF_FD_SEMAPHORE_LIMIT})")
     
     # Initialize processing manifest for resumable operations

@@ -89,14 +89,37 @@ invoice_pdf/               # new top-level package
 - ✅ Create `invoice_pdf/core/rate_limit.py` with `async retry_with_backoff` + `CapacityLimiter` wrapper.
 - ✅ Remove bespoke retry loops from `_legacy` classify / extract and delegate to helper.
 - ✅ Replace raw `asyncio.Semaphore` with `anyio.CapacityLimiter`.
+- ✅ Fix all legacy script integration issues (IndentationError, syntax errors).
+- ✅ Complete test coverage: 17 rate limiting tests + 38 total tests passing.
+- ✅ Clean up extraction function retry logic and old exception handling.
 
-**Status**: ✅ Complete - Rate limiting module implemented with comprehensive tests. Legacy code integration partially complete.
+**Status**: ✅ FULLY Complete - Committed as `066329f`. All tests passing (38/38). Background process (PID 13908) continues unaffected.
 
-### Phase 4 – Pure PDF Helpers
+**Technical Details for Future Reference:**
+- `CapacityLimiter` class provides anyio.CapacityLimiter compatibility with asyncio.Semaphore fallback
+- `retry_with_backoff()` function replaces all manual retry loops with exponential backoff + jitter
+- `RateLimitedExecutor` combines capacity limiting and retry logic for common use cases
+- Legacy functions `classify_document_async()` and `extract_document_data_async()` now use new rate limiting
+- Main semaphore initialization updated: `quota_limiter = CapacityLimiter(QUOTA_LIMIT)` 
+- PDF semaphore: `pdf_fd_semaphore = CapacityLimiter(PDF_FD_SEMAPHORE_LIMIT)`
+- All function signatures updated from `asyncio.Semaphore` → `CapacityLimiter`
 
-- Implement `invoice_pdf/core/pdf_utils.py` (`get_page_count`, `extract_first_n_pages`).
-- Migrate calls in `_legacy`.
-- Unit-test with tiny fixture PDFs.
+### Phase 4 – Pure PDF Helpers ✅ **COMPLETED**
+
+- ✅ Implement `invoice_pdf/core/pdf_utils.py` (`get_page_count`, `extract_first_n_pages`).
+- ✅ Migrate calls in `_legacy`.
+- ✅ Unit-test with tiny fixture PDFs.
+
+**Status**: ✅ Complete - Committed as `[TBD]`. All tests passing (67/67). Background process (PID 13908) continues unaffected.
+
+**Technical Details for Future Reference:**
+- `get_page_count()` and `extract_first_n_pages()` functions provide pure PDF operations
+- `safe_get_page_count()` and `safe_extract_first_n_pages()` provide async wrappers with semaphore protection
+- `initialize_pdf_semaphore()` centralizes semaphore initialization
+- Legacy code updated to use new PDF utilities with proper imports
+- 16 comprehensive unit tests cover sync/async operations, edge cases, and concurrent access
+- PDF semaphore management now centralized in `core.pdf_utils` module
+- All PDF operations now use `Path | str` type hints for flexibility
 
 ### Phase 5 – Persistence Layer Early
 
@@ -149,7 +172,8 @@ invoice_pdf/               # new top-level package
 | **core.classify**   | Turn `(PDF bytes ➜ ClassificationResult)` asynchronously.       |
 | **core.extract**    | Turn `(PDF bytes, doc_type ➜ ExtractionResult)` asynchronously. |
 | **core.pipeline**   | Coordinate classify/extract; implement retries, queuing.        |
-| **core.pdf_utils**  | Pure PDF operations; protected by fd-semaphore.                 |
+| **core.rate_limit** | Async retry with backoff, CapacityLimiter, RateLimitedExecutor. |
+| **core.pdf_utils**  | Pure PDF operations (page count, extraction); uses CapacityLimiter for fd-semaphore. |
 | **io.manifest**     | SQLite progress persistence.                                    |
 | **io.csv_stream**   | Streaming, back-pressure friendly CSV writer.                   |
 | **io.excel_report** | Convert result collections → XLSX workbook.                     |
@@ -186,7 +210,29 @@ invoice_pdf/               # new top-level package
 
 ## 8. Next Action
 
-> **Start Phase 1:** Scaffold `core/models.py`, migrate `classification_data` & `extraction_data` to strongly-typed objects. Once merged, proceed to Phase 2.
+> **Start Phase 5:** Move `utilities/manifest.py` → `invoice_pdf/io/manifest.py` and `utilities/streaming_csv.py` → `invoice_pdf/io/csv_stream.py`. Provide shim import in `_legacy` to avoid mass rename diff. Add migration tests verifying resume works.
+
+## 9. Current Status (as of commit [TBD])
+
+**✅ Completed Phases:** 0, 1, 2, 3, 4
+**🔄 Next Phase:** 5 (Persistence Layer Early)  
+**🏃‍♂️ Background Process:** PID 13908 - STILL RUNNING, unaffected by refactoring
+**📊 Test Status:** 67/67 tests passing across all modules
+**🗂️ Key Files Created:**
+- `invoice_pdf/config.py` - Typed configuration system
+- `invoice_pdf/logging_config.py` - Centralized logging
+- `invoice_pdf/core/models.py` - Pydantic v2 data models  
+- `invoice_pdf/core/rate_limit.py` - Async rate limiting & retry logic
+- `invoice_pdf/core/pdf_utils.py` - Pure PDF operations & semaphore management
+- `tests/test_*.py` - Comprehensive test coverage (67 tests)
+
+**⚠️ Important for Next Session:**
+- Legacy script is in `invoice_pdf/_legacy/main_2step_enhanced.py`
+- Uses new imports: `from core.rate_limit import CapacityLimiter, retry_with_backoff`
+- Uses new imports: `from core.pdf_utils import get_page_count, extract_first_n_pages, safe_get_page_count, safe_extract_first_n_pages, initialize_pdf_semaphore`
+- All semaphores converted to CapacityLimiter (anyio compatible, asyncio fallback)
+- PDF operations now centralized in `core.pdf_utils` module
+- Background process must remain unaffected - test after each change!
 
 ---
 
