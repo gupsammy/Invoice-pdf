@@ -28,18 +28,18 @@ This plan turns the **"Phase-0 checklist"** (low-hanging fruit, ≤1 day of work
 **Files**: `main_2step_enhanced.py`
 
 ```python
-# OLD (lines ~1461-1464)
-classify_semaphore = asyncio.Semaphore(MAX_CONCURRENT_CLASSIFY)
-extract_semaphore  = asyncio.Semaphore(MAX_CONCURRENT_EXTRACT)
+# OLD (lines ~1578-1579 in setup_processing_environment)
+quota_semaphore = asyncio.Semaphore(QUOTA_LIMIT)
+# Currently QUOTA_LIMIT = 10, but used only for classification
 ```
 
 ```python
-# NEW
-QUOTA_LIMIT = 10  # single-key AFC limit
+# NEW - Replace twin semaphores with single global quota
+QUOTA_LIMIT = 10  # single-key AFC limit (shared across both stages)
 quota_semaphore = asyncio.Semaphore(QUOTA_LIMIT)
 ```
 
-Refactor function signatures (`classify_document_async`, `extract_document_data_async`, wrappers, etc.) to receive `quota_semaphore` instead of individual ones.
+Refactor function signatures (`classify_document_async`, `extract_document_data_async`, wrappers, etc.) to receive `quota_semaphore` instead of individual semaphores.
 
 ### 1.2 Enable overlap
 
@@ -72,7 +72,9 @@ if SAVE_RESPONSES or not success:
         f.write(response.text)
 ```
 
-Apply in both classification & extraction loops.
+Apply in both classification & extraction loops (~lines 277-280, 423-426).
+
+**Note**: When `DEBUG_RESPONSES=0`, also consider reducing log verbosity from INFO to WARNING for cleaner output during large batches.
 
 Effort: 20 min. Test with flag 0/1 and inspect `json_responses/*` directory size.
 
@@ -117,7 +119,7 @@ pdf_bytes = await asyncio.to_thread(
 
 ### 4.2 Guard file-descriptor count
 
-Add module-level semaphore `pdf_fd_sem = asyncio.Semaphore(50)` and acquire it around `fitz.open` if OS limit is hit during stress test.
+Add module-level semaphore `pdf_fd_semaphore = asyncio.Semaphore(50)` and acquire it around `fitz.open` if OS limit is hit during stress test. (This matches the existing symbol near line 1802 in `main_2step_enhanced.py`.)
 
 Effort: 45 min. Validate no event-loop blockage via `asyncio.get_running_loop().time()` deltas.
 
