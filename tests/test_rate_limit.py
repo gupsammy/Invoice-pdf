@@ -6,6 +6,7 @@ import logging
 
 from invoice_pdf.core.rate_limit import (
     CapacityLimiter,
+    RetryError,
     retry_with_backoff,
     with_capacity_limit,
     with_retry,
@@ -113,14 +114,20 @@ class TestRetryWithBackoff:
             raise ValueError("Persistent error")
         
         with patch('asyncio.sleep', new_callable=AsyncMock):
-            result = await retry_with_backoff(
-                failing_op,
-                max_retries=2,
-                logger=mock_logger,
-                operation_name="failing_test"
-            )
+            with pytest.raises(RetryError) as exc_info:
+                await retry_with_backoff(
+                    failing_op,
+                    max_retries=2,
+                    logger=mock_logger,
+                    operation_name="failing_test"
+                )
         
-        assert result is None
+        # Verify RetryError contains expected information
+        error = exc_info.value
+        assert error.operation_name == "failing_test"
+        assert error.attempts == 2
+        assert isinstance(error.last_exception, ValueError)
+        
         assert mock_logger.warning.call_count == 1  # One retry
         mock_logger.error.assert_called_once()
     
@@ -130,14 +137,17 @@ class TestRetryWithBackoff:
         async def selective_fail():
             raise KeyError("Not retryable")
         
-        result = await retry_with_backoff(
-            selective_fail,
-            retry_exceptions=(ValueError,),  # Only retry ValueError
-            logger=mock_logger
-        )
+        with pytest.raises(RetryError) as exc_info:
+            await retry_with_backoff(
+                selective_fail,
+                retry_exceptions=(ValueError,),  # Only retry ValueError
+                logger=mock_logger
+            )
         
-        # Should not retry KeyError, should re-raise
-        assert result is None
+        # Should not retry KeyError, should raise RetryError immediately
+        error = exc_info.value
+        assert isinstance(error.last_exception, KeyError)
+        assert error.attempts == 1  # No retries for non-retryable exception
         mock_logger.warning.assert_not_called()
     
     @pytest.mark.asyncio
@@ -147,14 +157,15 @@ class TestRetryWithBackoff:
             raise ValueError("Always fails")
         
         with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            await retry_with_backoff(
-                failing_op,
-                max_retries=3,
-                base_delay=1.0,
-                max_delay=5.0,
-                jitter_range=0.0,  # No jitter for predictable testing
-                logger=mock_logger
-            )
+            with pytest.raises(RetryError):
+                await retry_with_backoff(
+                    failing_op,
+                    max_retries=3,
+                    base_delay=1.0,
+                    max_delay=5.0,
+                    jitter_range=0.0,  # No jitter for predictable testing
+                    logger=mock_logger
+                )
         
         # Should have called sleep with exponential backoff
         calls = mock_sleep.call_args_list

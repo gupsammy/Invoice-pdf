@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from config import Settings
 from logging_config import setup_logging
 from core.models import ClassificationResult, classification_result_to_dict
-from core.rate_limit import CapacityLimiter, retry_with_backoff
+from core.rate_limit import CapacityLimiter, RetryError, retry_with_backoff
 from core.pdf_utils import (
     get_page_count, 
     extract_first_n_pages,
@@ -239,16 +239,17 @@ async def classify_document_async(
                 )
                 return response
         
-        response = await retry_with_backoff(
-            operation=classify_operation,
-            max_retries=_MAX_RETRIES,
-            base_delay=2.0,
-            max_delay=10.0,
-            jitter_range=3.0,
-            operation_name=f"CLASSIFY {pdf_path_obj.name}"
-        )
-        
-        if response is None:
+        try:
+            response = await retry_with_backoff(
+                operation=classify_operation,
+                max_retries=_MAX_RETRIES,
+                base_delay=2.0,
+                max_delay=10.0,
+                jitter_range=3.0,
+                operation_name=f"CLASSIFY {pdf_path_obj.name}"
+            )
+        except RetryError as e:
+            logger.error(f"Classification failed after retries for {pdf_path}: {e}")
             return None
         
         # Save response for debugging (controlled by DEBUG_RESPONSES flag)
@@ -429,16 +430,17 @@ async def extract_document_data_async(
                 )
                 return response
         
-        response = await retry_with_backoff(
-            operation=extract_operation,
-            max_retries=_MAX_RETRIES,
-            base_delay=2.0,
-            max_delay=10.0,
-            jitter_range=3.0,
-            operation_name=f"EXTRACT {pdf_path_obj.name} ({document_type})"
-        )
-        
-        if response is None:
+        try:
+            response = await retry_with_backoff(
+                operation=extract_operation,
+                max_retries=_MAX_RETRIES,
+                base_delay=2.0,
+                max_delay=10.0,
+                jitter_range=3.0,
+                operation_name=f"EXTRACT {pdf_path_obj.name} ({document_type})"
+            )
+        except RetryError as e:
+            logger.error(f"Extraction failed after retries for {pdf_path}: {e}")
             return None
         
         # Save response for debugging in appropriate subfolder

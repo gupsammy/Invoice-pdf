@@ -15,6 +15,18 @@ except ImportError:
 T = TypeVar("T")
 
 
+class RetryError(Exception):
+    """Raised when all retry attempts are exhausted."""
+    
+    def __init__(self, operation_name: str, last_exception: Exception, attempts: int):
+        self.operation_name = operation_name
+        self.last_exception = last_exception
+        self.attempts = attempts
+        super().__init__(
+            f"{operation_name} failed after {attempts} attempts: {last_exception}"
+        )
+
+
 class CapacityLimiter:
     """Async capacity limiter compatible with anyio.CapacityLimiter interface.
 
@@ -68,7 +80,7 @@ async def retry_with_backoff(
     retry_exceptions: tuple = (Exception,),
     operation_name: str | None = None,
     logger: logging.Logger | None = None
-) -> T | None:
+) -> T:
     """Execute an async operation with exponential backoff retry logic.
 
     Args:
@@ -82,7 +94,10 @@ async def retry_with_backoff(
         logger: Logger instance to use (optional, defaults to module logger)
 
     Returns:
-        Result of successful operation, or None if all retries exhausted
+        Result of successful operation
+    
+    Raises:
+        RetryError: When all retry attempts are exhausted
     """
     if logger is None:
         logger = logging.getLogger(__name__)
@@ -119,21 +134,24 @@ async def retry_with_backoff(
                 f"[RETRY] {operation_desc} - Exhausted retries ({max_retries}): "
                 f"{str(exc)[:150]}"
             )
-            return None
+            raise RetryError(operation_desc, exc, max_retries)
         except Exception as exc:
-            # Non-retryable exception - return None instead of re-raising
+            # Non-retryable exception - raise RetryError with details
             operation_desc = operation_name or "operation"
             logger.error(
                 f"[RETRY] {operation_desc} - Non-retryable exception: "
                 f"{str(exc)[:150]}"
             )
-            return None
+            raise RetryError(operation_desc, exc, 1)  # Single attempt for non-retryable
 
     # Should not reach here, but handle edge case
     if last_exception:
         operation_desc = operation_name or "operation"
         logger.error(f"[RETRY] {operation_desc} - Unexpected retry loop exit")
-    return None
+        raise RetryError(operation_desc, last_exception, max_retries)
+    
+    # This should never happen, but ensure type safety
+    raise RetryError(operation_name or "operation", Exception("Unknown error"), max_retries)
 
 
 def with_capacity_limit(limiter: CapacityLimiter):
@@ -156,9 +174,9 @@ def with_retry(
     operation_name: str | None = None
 ):
     """Decorator to apply retry logic to async functions."""
-    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> T | None:
+        async def wrapper(*args, **kwargs) -> T:
             async def operation():
                 return await func(*args, **kwargs)
 
@@ -208,7 +226,7 @@ class RateLimitedExecutor:
         operation: Callable[[], Awaitable[T]],
         operation_name: str | None = None,
         retry_exceptions: tuple = (Exception,)
-    ) -> T | None:
+    ) -> T:
         """Execute operation with both capacity limiting and retry logic."""
         async def limited_operation():
             async with self.limiter:
