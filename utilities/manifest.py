@@ -35,6 +35,8 @@ class ProcessingManifest:
         return self
         
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # Force commit any pending batched operations before closing
+        self.force_commit()
         self.close()
         
     def connect(self) -> sqlite3.Connection:
@@ -120,18 +122,19 @@ class ProcessingManifest:
         """Mark a file as having completed extraction."""
         def operation():
             with self._lock:
+                # Use INSERT OR IGNORE followed by UPDATE to avoid race conditions
+                # First, ensure the row exists
                 self._conn.execute("""
-                    INSERT OR REPLACE INTO progress 
-                    (file_path, classified, classification, extracted, doc_type, updated_at)
-                    VALUES (
-                        ?, 
-                        COALESCE((SELECT classified FROM progress WHERE file_path = ?), 1),
-                        COALESCE((SELECT classification FROM progress WHERE file_path = ?), ''),
-                        1,
-                        COALESCE((SELECT doc_type FROM progress WHERE file_path = ?), ''),
-                        ?
-                    )
-                """, (file_path, file_path, file_path, file_path, datetime.now().isoformat()))
+                    INSERT OR IGNORE INTO progress (file_path, classified, classification, doc_type, updated_at)
+                    VALUES (?, 1, '', '', ?)
+                """, (file_path, datetime.now().isoformat()))
+                
+                # Then update the extraction status
+                self._conn.execute("""
+                    UPDATE progress 
+                    SET extracted = 1, updated_at = ?
+                    WHERE file_path = ?
+                """, (datetime.now().isoformat(), file_path))
                 
                 self._batch_counter += 1
                 if self._batch_counter >= self.batch_size:
@@ -174,6 +177,10 @@ class ProcessingManifest:
         Returns:
             Tuple of (classify_list, extract_list)
         """
+        # Handle empty pdf_paths list early to avoid SQL syntax error
+        if not pdf_paths:
+            return [], []
+            
         def operation():
             with self._lock:
                 # Get current progress for all files
@@ -321,6 +328,9 @@ class ProcessingManifest:
         def operation():
             with self._lock:
                 if file_paths:
+                    # Handle empty file_paths list to avoid SQL syntax error
+                    if not file_paths:
+                        return
                     placeholders = ','.join('?' * len(file_paths))
                     self._conn.execute(f"""
                         UPDATE progress 

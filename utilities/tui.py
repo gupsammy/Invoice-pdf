@@ -88,17 +88,19 @@ class ProcessingTUI:
             if elapsed_time < 30:  # Need some time to calculate meaningful rate
                 return "Calculating..."
             
-            completed = stats['classified'] + stats['extracted']
-            total_work = stats['total_files'] * 2  # Each file needs classification + extraction
+            # Count completed files (extracted files represent fully completed processing)
+            completed_files = stats['extracted']
+            total_files = stats['total_files']
             
-            if completed == 0:
+            if completed_files == 0:
                 return "Calculating..."
                 
-            rate = completed / elapsed_time
-            remaining_work = total_work - completed
+            # Calculate rate based on fully completed files
+            rate = completed_files / elapsed_time
+            remaining_files = total_files - completed_files
             
             if rate > 0:
-                eta_seconds = remaining_work / rate
+                eta_seconds = remaining_files / rate
                 eta = timedelta(seconds=int(eta_seconds))
                 return str(eta)
             else:

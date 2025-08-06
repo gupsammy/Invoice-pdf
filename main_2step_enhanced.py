@@ -72,6 +72,10 @@ MAX_EXTRACTION_PAGES = 20     # Only process files with ≤20 pages for extracti
 CLASSIFICATION_MODEL = "gemini-2.5-flash"
 EXTRACTION_MODEL = "gemini-2.5-pro"
 
+# Concurrency Configuration
+MAX_CONCURRENT_CLASSIFY = 5   # Max concurrent classification tasks
+MAX_CONCURRENT_EXTRACT = 3    # Max concurrent extraction tasks
+
 def setup_logging(logs_folder):
     """Set up logging with the specified logs folder."""
     os.makedirs(logs_folder, exist_ok=True)
@@ -177,12 +181,11 @@ def extract_first_n_pages_pdf(pdf_path: str, max_pages: int = MAX_CLASSIFICATION
             source_doc.close()
             return pdf_bytes
         
-        # Fastest path: create a lightweight slice without mutating the original document
-        # PyMuPDF lets us take a sub-document view via slicing. This returns a new
-        # in-memory Document containing only the requested pages.
-        sub_doc = source_doc[0:pages_to_copy]
-        pdf_bytes = sub_doc.tobytes()
-        sub_doc.close()
+        # Create a new document and copy pages
+        new_doc = fitz.open()
+        new_doc.insert_pdf(source_doc, from_page=0, to_page=pages_to_copy-1)
+        pdf_bytes = new_doc.tobytes()
+        new_doc.close()
         source_doc.close()
         return pdf_bytes
         
@@ -933,13 +936,13 @@ def save_employee_extraction_results_to_csv(extraction_results: List[Dict[str, A
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     fieldnames = [
-        "File Name", "File Path", "Document Type", "Readable", "Contains Invoices",
-        "Multiple Documents", "Orientation Issues", "Data Source", "Vendor Name",
-        "Employee Code", "Department", "PAN", "Registration Numbers", 
-        "Invoice Date", "Document Number", "Invoice Number", "Description", 
+        "File Name", "File Path", "Document Type", "Total Pages In PDF",
+        "Readable", "Contains Invoices", "Multiple Documents", "Orientation Issues", 
+        "Data Source", "Employee Name", "Employee Code", "Department", 
+        "Invoice Date", "Description", 
         "Basic Amount", "Tax Amount", "Total Amount", "Currency Code", 
-        "Original Amount", "Amount Calculated", "Calculation Method", 
-        "Total Pages In PDF", "Page Numbers", "Processing Notes"
+        "Original Amount", "Amount Calculated", "Calculation Method",
+        "Page Numbers", "Processing Notes"
     ]
     
     try:
@@ -957,19 +960,16 @@ def save_employee_extraction_results_to_csv(extraction_results: List[Dict[str, A
                         "File Name": result.get("file_name", ""),
                         "File Path": result.get("file_path", ""),
                         "Document Type": result.get("document_type_processed", ""),
+                        "Total Pages In PDF": result.get("total_pages_in_pdf", ""),
                         "Readable": doc_status.get("readable", ""),
                         "Contains Invoices": doc_status.get("contains_invoices", ""),
                         "Multiple Documents": doc_status.get("multiple_documents", ""),
                         "Orientation Issues": doc_status.get("orientation_issues", ""),
                         "Data Source": "",
-                        "Vendor Name": "",
+                        "Employee Name": "",
                         "Employee Code": "",
                         "Department": "",
-                        "PAN": "",
-                        "Registration Numbers": "",
                         "Invoice Date": "",
-                        "Document Number": "",
-                        "Invoice Number": "",
                         "Description": "",
                         "Basic Amount": "",
                         "Tax Amount": "",
@@ -978,7 +978,6 @@ def save_employee_extraction_results_to_csv(extraction_results: List[Dict[str, A
                         "Original Amount": "",
                         "Amount Calculated": "",
                         "Calculation Method": "",
-                        "Total Pages In PDF": result.get("total_pages_in_pdf", ""),
                         "Page Numbers": "",
                         "Processing Notes": result.get("processing_notes", "")
                     }
@@ -986,9 +985,6 @@ def save_employee_extraction_results_to_csv(extraction_results: List[Dict[str, A
                 else:
                     # Create row for each extracted data entry
                     for data_entry in extracted_data:
-                        reg_numbers = data_entry.get("registration_numbers", [])
-                        reg_numbers_str = ", ".join([f"{reg.get('type', '')}:{reg.get('value', '')}" for reg in reg_numbers])
-                        
                         page_numbers = data_entry.get("page_numbers", [])
                         page_numbers_str = ", ".join(map(str, page_numbers)) if page_numbers else ""
                         
@@ -996,19 +992,16 @@ def save_employee_extraction_results_to_csv(extraction_results: List[Dict[str, A
                             "File Name": result.get("file_name", ""),
                             "File Path": result.get("file_path", ""),
                             "Document Type": result.get("document_type_processed", ""),
+                            "Total Pages In PDF": result.get("total_pages_in_pdf", ""),
                             "Readable": doc_status.get("readable", ""),
                             "Contains Invoices": doc_status.get("contains_invoices", ""),
                             "Multiple Documents": doc_status.get("multiple_documents", ""),
                             "Orientation Issues": doc_status.get("orientation_issues", ""),
                             "Data Source": data_entry.get("data_source", ""),
-                            "Vendor Name": data_entry.get("vendor_name", ""),
+                            "Employee Name": data_entry.get("employee_name", ""),
                             "Employee Code": data_entry.get("employee_code", ""),
                             "Department": data_entry.get("department", ""),
-                            "PAN": data_entry.get("pan", ""),
-                            "Registration Numbers": reg_numbers_str,
                             "Invoice Date": data_entry.get("invoice_date", ""),
-                            "Document Number": data_entry.get("document_number", ""),
-                            "Invoice Number": data_entry.get("invoice_number", ""),
                             "Description": data_entry.get("description", ""),
                             "Basic Amount": data_entry.get("basic_amount", ""),
                             "Tax Amount": data_entry.get("tax_amount", ""),
@@ -1017,7 +1010,6 @@ def save_employee_extraction_results_to_csv(extraction_results: List[Dict[str, A
                             "Original Amount": data_entry.get("original_amount", ""),
                             "Amount Calculated": data_entry.get("amount_calculated", ""),
                             "Calculation Method": data_entry.get("calculation_method", ""),
-                            "Total Pages In PDF": result.get("total_pages_in_pdf", ""),
                             "Page Numbers": page_numbers_str,
                             "Processing Notes": result.get("processing_notes", "")
                         }
@@ -1146,31 +1138,132 @@ def get_failed_files_csv_config():
 def get_vendor_extraction_csv_config():
     """Configuration for vendor extraction results CSV."""
     fieldnames = [
-        "File Name", "File Path", "Document Type", "Readable", "Contains Invoices",
-        "Multiple Documents", "Orientation Issues", "Data Source", "Issuer", 
-        "Consignor", "Consignee", "Vendor Name", "Original Vendor Name", 
-        "Invoice Type", "PAN", "Registration Numbers", "Invoice Date", 
-        "Document Number", "Invoice Number", "Description", "Basic Amount", 
-        "Tax Amount", "Total Amount", "Currency Code", "Original Amount", 
-        "Exchange Rate", "Amount Calculated", "Calculation Method", "Is Main Invoice",
-        "Total Pages In PDF", "Page Numbers", "Processing Notes"
+        "file_name", "file_path", "document_type", "readable", "contains_invoices",
+        "multiple_documents", "orientation_issues", "data_source", "issuer", 
+        "consignor", "consignee", "vendor_name", "original_vendor_name", 
+        "invoice_type", "pan", "registration_numbers", "invoice_date", 
+        "document_number", "invoice_number", "description", "basic_amount", 
+        "tax_amount", "total_amount", "currency_code", "original_amount", 
+        "exchange_rate", "amount_calculated", "calculation_method", "is_main_invoice",
+        "total_pages_in_pdf", "page_numbers", "processing_notes"
     ]
     return {"fieldnames": fieldnames}
 
 def get_employee_extraction_csv_config():
-    """Configuration for employee extraction results CSV."""
+    """Configuration for employee extraction results CSV - only fields actually extracted."""
     fieldnames = [
-        "File Name", "File Path", "Document Type", "Employee Code", "Employee Name",
-        "Employee Designation", "Reporting Manager", "Department", "Team",
-        "Travel Dates From", "Travel Dates To", "Travel Duration Days", 
-        "Travel Purpose", "Travel Description", "Project Worked For",
-        "Location/City", "Transport Type", "Invoice Type", "Invoice Date",
-        "Invoice Number", "Vendor Name", "Description", "Basic Amount",
-        "Tax Amount", "Total Amount", "Currency Code", "Original Amount",
-        "Exchange Rate", "Amount Calculated", "Calculation Method", "Is Main Invoice",
-        "Total Pages In PDF", "Page Numbers", "Processing Notes"
+        # File metadata
+        "file_name", "file_path", "document_type", "total_pages_in_pdf",
+        # Document status (from document_status)
+        "readable", "contains_invoices", "multiple_documents", "orientation_issues",
+        # Core employee data (from extracted_data)
+        "data_source", "employee_name", "employee_code", "department", 
+        "invoice_date", "description", 
+        # Financial data
+        "basic_amount", "tax_amount", "total_amount", "currency_code", 
+        "original_amount", "amount_calculated", "calculation_method",
+        # Processing metadata
+        "page_numbers", "processing_notes"
     ]
     return {"fieldnames": fieldnames}
+
+def build_vendor_rows(result: dict):
+    """Yield one CSV row per invoice in a VENDOR result."""
+    doc = result
+    doc_status = doc.get("document_status", {})
+    entries = doc.get("extracted_data", []) or [{}]  # at least one row
+
+    for e in entries:
+        # Handle registration_numbers list
+        reg_numbers = ""
+        if e.get("registration_numbers"):
+            reg_numbers = ", ".join(
+                f"{r.get('type', '')}:{r.get('value', '')}"
+                for r in e.get("registration_numbers", [])
+            )
+        
+        # Handle page_numbers list
+        page_nums = ""
+        if e.get("page_numbers"):
+            page_nums = ", ".join(map(str, e.get("page_numbers", [])))
+        
+        yield {
+            "file_name": doc.get("file_name", ""),
+            "file_path": doc.get("file_path", ""),
+            "document_type": doc.get("document_type_processed", ""),
+            "readable": doc_status.get("readable", ""),
+            "contains_invoices": doc_status.get("contains_invoices", ""),
+            "multiple_documents": doc_status.get("multiple_documents", ""),
+            "orientation_issues": doc_status.get("orientation_issues", ""),
+            "data_source": e.get("data_source", ""),
+            "issuer": e.get("issuer", ""),
+            "consignor": e.get("consignor", ""),
+            "consignee": e.get("consignee", ""),
+            "vendor_name": e.get("vendor_name", ""),
+            "original_vendor_name": e.get("original_vendor_name", ""),
+            "invoice_type": e.get("invoice_type", ""),
+            "pan": e.get("pan", ""),
+            "registration_numbers": reg_numbers,
+            "invoice_date": e.get("invoice_date", ""),
+            "document_number": e.get("document_number", ""),
+            "invoice_number": e.get("invoice_number", ""),
+            "description": e.get("description", ""),
+            "basic_amount": e.get("basic_amount", ""),
+            "tax_amount": e.get("tax_amount", ""),
+            "total_amount": e.get("total_amount", ""),
+            "currency_code": e.get("currency_code", ""),
+            "original_amount": e.get("original_amount", ""),
+            "exchange_rate": e.get("exchange_rate", ""),
+            "amount_calculated": e.get("amount_calculated", ""),
+            "calculation_method": e.get("calculation_method", ""),
+            "is_main_invoice": e.get("is_main_invoice", ""),
+            "total_pages_in_pdf": doc.get("total_pages_in_pdf", ""),
+            "page_numbers": page_nums,
+            "processing_notes": doc.get("processing_notes", "")
+        }
+
+def build_employee_rows(result: dict):
+    """Yield one CSV row per expense item in an EMPLOYEE result - only relevant fields."""
+    doc = result
+    doc_status = doc.get("document_status", {})
+    entries = doc.get("extracted_data", []) or [{}]  # at least one row
+
+    for e in entries:
+        # Handle page_numbers list
+        page_nums = ""
+        if e.get("page_numbers"):
+            page_nums = ", ".join(map(str, e.get("page_numbers", [])))
+        
+        yield {
+            # File metadata
+            "file_name": doc.get("file_name", ""),
+            "file_path": doc.get("file_path", ""),
+            "document_type": doc.get("document_type_processed", ""),
+            "total_pages_in_pdf": doc.get("total_pages_in_pdf", ""),
+            # Document status
+            "readable": doc_status.get("readable", ""),
+            "contains_invoices": doc_status.get("contains_invoices", ""),
+            "multiple_documents": doc_status.get("multiple_documents", ""),
+            "orientation_issues": doc_status.get("orientation_issues", ""),
+            # Core employee data (only fields actually extracted)
+            "data_source": e.get("data_source", ""),
+            "employee_name": e.get("employee_name", ""),
+            "employee_code": e.get("employee_code", ""),
+            "department": e.get("department", ""),
+            "invoice_date": e.get("invoice_date", ""),
+            "description": e.get("description", ""),
+            # Financial data
+            "basic_amount": e.get("basic_amount", ""),
+            "tax_amount": e.get("tax_amount", ""),
+            "total_amount": e.get("total_amount", ""),
+            "currency_code": e.get("currency_code", ""),
+            "original_amount": e.get("original_amount", ""),
+            "amount_calculated": e.get("amount_calculated", ""),
+            "calculation_method": e.get("calculation_method", ""),
+            # Processing metadata
+            "page_numbers": page_nums,
+            "processing_notes": doc.get("processing_notes", "")
+        }
 
 def create_worksheet(workbook, sheet_name: str, headers: List[str], data_rows: List[List], header_color: str = "366092"):
     """
@@ -1567,6 +1660,96 @@ def create_summary_report(
     except Exception as e:
         logging.error(f"Error creating summary report: {str(e)}")
 
+def create_chunked_summary_report(
+    output_folder: str,
+    input_folder_name: str,
+    total_files: int,
+    classified_files: int,
+    relevant_files: int,
+    extracted_files: int,
+    vendor_extracted: int,
+    employee_extracted: int,
+    elapsed_time: float
+):
+    """Create simplified markdown summary report for chunked processing mode."""
+    summary_filename = f"{input_folder_name}_summary.md"
+    summary_path = os.path.join(output_folder, summary_filename)
+    
+    try:
+        # Generate simplified markdown content for chunked mode
+        # Safe percentage calculations
+        classified_pct = (classified_files/total_files*100) if total_files > 0 else 0
+        relevant_pct = (relevant_files/total_files*100) if total_files > 0 else 0
+        extracted_pct = (extracted_files/relevant_files*100) if relevant_files > 0 else 0
+        
+        markdown_content = f"""# Invoice Processing Summary Report
+
+## Processing Overview
+- **Input Folder**: `{input_folder_name}`
+- **Processing Date**: {time.strftime('%Y-%m-%d %H:%M:%S')}
+- **Total Processing Time**: {elapsed_time:.2f} seconds
+- **Configuration**: Enhanced 2-Step Pipeline with {CLASSIFICATION_MODEL} + {EXTRACTION_MODEL}
+- **Processing Mode**: Chunked Processing (memory-efficient streaming)
+
+## File Processing Statistics
+
+### Overall Results
+| Metric | Count | Percentage |
+|--------|-------|------------|
+| **Total Files Processed** | {total_files} | 100.0% |
+| **Successfully Classified** | {classified_files} | {classified_pct:.1f}% |
+| **Eligible for Extraction** | {relevant_files} | {relevant_pct:.1f}% |
+| **Successfully Extracted** | {extracted_files} | {extracted_pct:.1f}% of eligible |
+
+### Extraction Results
+- **Vendor Invoices Extracted**: {vendor_extracted}
+- **Employee T&E Extracted**: {employee_extracted}
+
+## Processing Details
+
+### Pipeline Configuration
+- **Classification Model**: {CLASSIFICATION_MODEL}
+- **Extraction Model**: {EXTRACTION_MODEL}
+- **Classification Pages**: First {MAX_CLASSIFICATION_PAGES} pages analyzed
+- **Extraction Page Limit**: ≤{MAX_EXTRACTION_PAGES} pages (truncated if larger)
+- **Max Concurrent Classify**: {MAX_CONCURRENT_CLASSIFY}
+- **Max Concurrent Extract**: {MAX_CONCURRENT_EXTRACT}
+- **Processing Mode**: Chunked streaming (chunk size: {PROCESSING_CHUNK_SIZE})
+
+### Quality Metrics
+- **Classification Success Rate**: {classified_pct:.1f}%
+- **Extraction Success Rate**: {extracted_pct:.1f}% (of eligible files)
+- **Overall Processing Success Rate**: {(extracted_files/total_files*100) if total_files > 0 else 0:.1f}%
+
+## Output Files Generated
+
+### CSV Files
+- `{CLASSIFICATION_CSV_FILE}` - Classification results for all files
+- `{VENDOR_EXTRACTION_CSV_FILE}` - Vendor invoice extraction results
+- `{EMPLOYEE_EXTRACTION_CSV_FILE}` - Employee T&E extraction results
+
+### Processing Notes
+- **Memory Optimization**: Used chunked processing with streaming CSV writers for large datasets
+- **Detailed Statistics**: Use non-chunked mode (smaller datasets) for detailed breakdowns
+- **Excel Reports**: Available in non-chunked mode; CSV files contain all data
+
+### Debug Information
+- JSON responses saved to: `json_responses_2step_enhanced/{input_folder_name}/`
+- Logs saved to: `{LOGS_FOLDER}/{LOG_FILE}`
+
+---
+*Report generated by Enhanced 2-Step Invoice Processing Pipeline (Chunked Mode)*
+"""
+        
+        # Write markdown file
+        with open(summary_path, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+        
+        logging.info(f"Chunked summary report saved to {summary_path}")
+        
+    except Exception as e:
+        logging.error(f"Error creating chunked summary report: {str(e)}")
+
 def create_dynamic_output_folders(input_folder: str, base_output_folder: str, base_json_folder: str) -> Tuple[str, str]:
     """Create dynamic output folders based on input folder name."""
     input_folder_name = os.path.basename(os.path.normpath(input_folder))
@@ -1661,7 +1844,6 @@ async def setup_processing_environment(
     http_options = types.HttpOptions(
         async_client_args={
             "connector": aiohttp.TCPConnector(limit=50, limit_per_host=10),
-            "timeout": aiohttp.ClientTimeout(total=60),
         }
     )
     
@@ -1764,24 +1946,35 @@ async def process_chunk_with_streaming_csv(
     Returns:
         Tuple of (classified_count, extracted_count, failed_classify_count, failed_extract_count)
     """
+    # Check for shutdown request before processing chunk
+    global shutdown_event
+    if shutdown_event and shutdown_event.is_set():
+        logging.info(f"🛑 Shutdown requested, skipping chunk {chunk_number}")
+        return 0, 0, 0, 0
+    
     logging.info(f"📦 Processing chunk {chunk_number}/{total_chunks} ({len(pdf_chunk)} files)")
     
     # Process this chunk with pipeline overlap
-    classification_results, extraction_results, failed_classification, failed_extraction = await process_with_pipeline_overlap(
+    classification_results, extraction_results, failed_classification, failed_extraction, relevant_documents = await process_with_pipeline_overlap(
         pdf_chunk, client, quota_semaphore, json_responses_folder
     )
     
     # Stream classification results to CSV immediately
+    classification_config = get_classification_csv_config()
+    row_mapper = classification_config["row_mapper"]
     for result in classification_results:
-        await classification_writer.write_row(result)
+        mapped_result = row_mapper(result)
+        await classification_writer.write_row(mapped_result)
     
-    # Stream extraction results to appropriate CSV files immediately
+    # Stream extraction results to appropriate CSV files immediately (with flattening)
     for result in extraction_results:
         doc_type = result.get("document_type_processed", "")
         if doc_type == "vendor_invoice":
-            await vendor_writer.write_row(result)
+            for row in build_vendor_rows(result):
+                await vendor_writer.write_row(row)
         elif doc_type == "employee_t&e":
-            await employee_writer.write_row(result)
+            for row in build_employee_rows(result):
+                await employee_writer.write_row(row)
     
     logging.info(f"✅ Chunk {chunk_number} complete: {len(classification_results)} classified, {len(extraction_results)} extracted")
     
@@ -1792,7 +1985,7 @@ async def process_with_pipeline_overlap(
     client: "genai.Client",
     quota_semaphore: asyncio.Semaphore,
     json_responses_folder: str
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, str]], List[Dict[str, str]]]:
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, str]], List[Dict[str, str]], List[Tuple[str, str]]]:
     """
     Process files with pipeline overlap: start extraction immediately as classification completes.
     
@@ -1803,12 +1996,13 @@ async def process_with_pipeline_overlap(
         json_responses_folder: Folder to save JSON responses
         
     Returns:
-        Tuple of (classification_results, extraction_results, failed_classification, failed_extraction)
+        Tuple of (classification_results, extraction_results, failed_classification, failed_extraction, relevant_documents)
     """
     classification_results = []
     extraction_results = []
     failed_classification = []
     failed_extraction = []
+    relevant_documents = []
     
     # Use asyncio.Queue to stream classification results to extraction
     extraction_queue = asyncio.Queue()
@@ -1839,29 +2033,30 @@ async def process_with_pipeline_overlap(
         
     async def extraction_worker():
         """Process extractions as they become available from classification"""
-        nonlocal extraction_results, failed_extraction
-        relevant_documents = []
+        nonlocal extraction_results, failed_extraction, relevant_documents
+        batch_documents = []
         
         while True:
             item = await extraction_queue.get()
             if item is None:  # Sentinel - classification is done
                 break
             relevant_documents.append(item)
+            batch_documents.append(item)
             
             # Process in batches to avoid overwhelming the extraction pipeline
-            if len(relevant_documents) >= 50:  # Process in batches of 50
+            if len(batch_documents) >= 50:  # Process in batches of 50
                 extract_results, extract_failed = await process_with_retries(
-                    relevant_documents, client, quota_semaphore, json_responses_folder,
+                    batch_documents, client, quota_semaphore, json_responses_folder,
                     stage="extraction", max_passes=3
                 )
                 extraction_results.extend(extract_results)
                 failed_extraction.extend(extract_failed)
-                relevant_documents = []
+                batch_documents = []
         
         # Process any remaining documents
-        if relevant_documents:
+        if batch_documents:
             extract_results, extract_failed = await process_with_retries(
-                relevant_documents, client, quota_semaphore, json_responses_folder,
+                batch_documents, client, quota_semaphore, json_responses_folder,
                 stage="extraction", max_passes=3
             )
             extraction_results.extend(extract_results)
@@ -1873,7 +2068,7 @@ async def process_with_pipeline_overlap(
         extraction_worker()
     )
     
-    return classification_results, extraction_results, failed_classification, failed_extraction
+    return classification_results, extraction_results, failed_classification, failed_extraction, relevant_documents
 
 async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None, resume_extraction=False, resume=False, no_tui=False):
     """
@@ -1949,6 +2144,12 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         # Set up for regular processing with filtered lists
         pdf_files = all_pdf_files  # Will be filtered by manifest during processing
         
+        # Initialize result variables for manifest mode
+        classification_results = []
+        extraction_results = []
+        failed_classification = []
+        failed_extraction = []
+        
     elif resume_extraction:
         # ===========================
         # RESUME MODE: SKIP CLASSIFICATION, USE EXISTING RESULTS
@@ -2023,39 +2224,42 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
             
         logging.info(f"📊 Chunked processing complete: {total_classified} classified, {total_extracted} extracted")
         
-        # For compatibility, create empty result lists (actual data already written to CSV)
+        # Initialize empty result arrays for compatibility with final reporting
         classification_results = []
         extraction_results = []
         failed_classification = []
         failed_extraction = []
     
     if not resume_extraction:
-        # Enhanced classification summary (only for non-resume mode)
-        classification_counts = {}
-        page_stats = {"≤10": 0, "11-20": 0, ">20": 0}
-        
-        for result in classification_results:
-            classification = result.get("classification", "unknown")
-            classification_counts[classification] = classification_counts.get(classification, 0) + 1
+        # Enhanced classification summary (only for non-resume mode and non-chunked mode)
+        if classification_results:  # Only if we have detailed classification data
+            classification_counts = {}
+            page_stats = {"≤10": 0, "11-20": 0, ">20": 0}
             
-            total_pages = result.get("total_pages_in_pdf", 0)
-            if total_pages <= 10:
-                page_stats["≤10"] += 1
-            elif total_pages <= 20:
-                page_stats["11-20"] += 1
-            else:
-                page_stats[">20"] += 1
-        
-        logging.info(f"📊 Enhanced Classification Results:")
-        total_classified = len(classification_results)
-        for classification, count in classification_counts.items():
-            percentage = (count / total_classified) * 100 if total_classified > 0 else 0
-            logging.info(f"   {classification}: {count} files ({percentage:.1f}%)")
-        
-        logging.info(f"📖 Page Distribution:")
-        for page_range, count in page_stats.items():
-            percentage = (count / total_classified) * 100 if total_classified > 0 else 0
-            logging.info(f"   {page_range} pages: {count} files ({percentage:.1f}%)")
+            for result in classification_results:
+                classification = result.get("classification", "unknown")
+                classification_counts[classification] = classification_counts.get(classification, 0) + 1
+                
+                total_pages = result.get("total_pages_in_pdf", 0)
+                if total_pages <= 10:
+                    page_stats["≤10"] += 1
+                elif total_pages <= 20:
+                    page_stats["11-20"] += 1
+                else:
+                    page_stats[">20"] += 1
+            
+            logging.info(f"📊 Enhanced Classification Results:")
+            total_classified = len(classification_results)
+            for classification, count in classification_counts.items():
+                percentage = (count / total_classified) * 100 if total_classified > 0 else 0
+                logging.info(f"   {classification}: {count} files ({percentage:.1f}%)")
+            
+            logging.info(f"📖 Page Distribution:")
+            for page_range, count in page_stats.items():
+                percentage = (count / total_classified) * 100 if total_classified > 0 else 0
+                logging.info(f"   {page_range} pages: {count} files ({percentage:.1f}%)")
+        else:
+            logging.info(f"📊 Enhanced Classification Results: Detailed breakdown skipped in chunked processing mode")
     
     # ===========================
     # EXTRACTION RESULTS HANDLING
@@ -2081,6 +2285,13 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         skipped_processing_failed = len([r for r in classification_results if r.get("classification") == "processing_failed"]) 
         oversized_count = len([r for r in classification_results if r.get("total_pages_in_pdf", 0) > MAX_EXTRACTION_PAGES and r.get("classification") in ["employee_t&e", "vendor_invoice"]])
         relevant_count = len([r for r in classification_results if r.get("classification") in ["employee_t&e", "vendor_invoice"]])
+        
+        # Create relevant_documents list from classification results for reporting
+        relevant_documents = [
+            (r["file_path"], r.get("classification"))
+            for r in classification_results 
+            if r.get("classification") in ["employee_t&e", "vendor_invoice"]
+        ]
         
         logging.info(f"💎 Pipeline Processing Complete - {len(extraction_results)} documents extracted")
         logging.info(f"⚡ Processing Statistics:")
@@ -2118,12 +2329,23 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     # ENHANCED FINAL SUMMARY
     # ===========================
     
-    total_files = len(pdf_files)
-    classified_files = len(classification_results)
-    relevant_files = len(relevant_documents)
-    extracted_files = len(extraction_results)
-    vendor_extracted = len(vendor_results)
-    employee_extracted = len(employee_results)
+    # Handle both chunked and non-chunked modes for statistics
+    if not classification_results and 'total_classified' in locals():
+        # Chunked mode - use the accumulated counts
+        total_files = len(pdf_files)
+        classified_files = total_classified
+        extracted_files = total_extracted
+        vendor_extracted = len(vendor_results) if vendor_results else 0
+        employee_extracted = len(employee_results) if employee_results else 0
+        relevant_files = len(relevant_documents) if relevant_documents else extracted_files
+    else:
+        # Non-chunked mode - use the arrays
+        total_files = len(pdf_files)
+        classified_files = len(classification_results)
+        relevant_files = len(relevant_documents)
+        extracted_files = len(extraction_results)
+        vendor_extracted = len(vendor_results)
+        employee_extracted = len(employee_results)
     
     # Count oversized files that were processed
     oversized_processed = sum(1 for result in classification_results 
@@ -2132,9 +2354,15 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     
     logging.info(f"🎯 ENHANCED 2-STEP FINAL RESULTS:")
     logging.info(f"   📁 Total files processed: {total_files}")
-    logging.info(f"   🏷️  Successfully classified: {classified_files} ({classified_files/total_files*100:.1f}%)")
-    logging.info(f"   💎 Eligible for extraction: {relevant_files} ({relevant_files/total_files*100:.1f}%)")
-    logging.info(f"   ✅ Successfully extracted: {extracted_files} ({extracted_files/relevant_files*100:.1f}% of eligible)")
+    
+    # Safe percentage calculations to avoid division by zero
+    classified_pct = (classified_files/total_files*100) if total_files > 0 else 0
+    relevant_pct = (relevant_files/total_files*100) if total_files > 0 else 0
+    extracted_pct = (extracted_files/relevant_files*100) if relevant_files > 0 else 0
+    
+    logging.info(f"   🏷️  Successfully classified: {classified_files} ({classified_pct:.1f}%)")
+    logging.info(f"   💎 Eligible for extraction: {relevant_files} ({relevant_pct:.1f}%)")
+    logging.info(f"   ✅ Successfully extracted: {extracted_files} ({extracted_pct:.1f}% of eligible)")
     logging.info(f"   🏢 Vendor invoices extracted: {vendor_extracted}")
     logging.info(f"   👤 Employee T&E extracted: {employee_extracted}")
     logging.info(f"   ⚡ Total non-processable files skipped: {total_files - relevant_files} files (irrelevant + processing failed)")
@@ -2177,31 +2405,48 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     # Get input folder name for file naming
     input_folder_name = os.path.basename(os.path.normpath(input_folder))
     
-    # Create Excel report with 3 worksheets
-    logging.info("📊 Creating Excel report with 3 worksheets...")
-    create_excel_report(
-        classification_results, 
-        vendor_results, 
-        employee_results, 
-        output_folder, 
-        input_folder_name
-    )
-    
-    # Create markdown summary report
-    logging.info("📝 Creating summary report...")
-    # Calculate elapsed time
-    elapsed_time = time.time() - start_time
-    create_summary_report(
-        classification_results,
-        vendor_results, 
-        employee_results,
-        unique_failed_files,
-        output_folder,
-        input_folder_name,
-        total_files,
-        elapsed_time,
-        relevant_documents
-    )
+    # Create Excel and summary reports (only if we have data arrays or adjust for chunked mode)
+    if classification_results or vendor_results or employee_results:
+        # Create Excel report with 3 worksheets
+        logging.info("📊 Creating Excel report with 3 worksheets...")
+        create_excel_report(
+            classification_results, 
+            vendor_results, 
+            employee_results, 
+            output_folder, 
+            input_folder_name
+        )
+        
+        # Create markdown summary report
+        logging.info("📝 Creating summary report...")
+        # Calculate elapsed time
+        elapsed_time = time.time() - start_time
+        create_summary_report(
+            classification_results,
+            vendor_results, 
+            employee_results,
+            unique_failed_files,
+            output_folder,
+            input_folder_name,
+            total_files,
+            elapsed_time,
+            relevant_documents
+        )
+    else:
+        # Chunked mode - create simplified reports since arrays are empty for memory efficiency
+        logging.info("📊 Chunked mode: Creating simplified summary report...")
+        elapsed_time = time.time() - start_time
+        create_chunked_summary_report(
+            output_folder,
+            input_folder_name,
+            total_files,
+            classified_files,
+            relevant_files,
+            extracted_files,
+            vendor_extracted,
+            employee_extracted,
+            elapsed_time
+        )
     
     logging.info(f"📊 Enhanced results saved to {output_folder}/")
     logging.info(f"   - Classification: {CLASSIFICATION_CSV_FILE}")
@@ -2231,6 +2476,12 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
             logging.debug("📋 Manifest connection closed")
         except Exception as e:
             logging.debug(f"Error closing manifest: {e}")
+    
+    # Memory cleanup - clear result lists after all reporting is complete
+    classification_results = []
+    extraction_results = []
+    failed_classification = []
+    failed_extraction = []
 
 if __name__ == "__main__":
     # Parse command line arguments
