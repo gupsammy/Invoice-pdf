@@ -9,7 +9,7 @@ import logging
 import sqlite3
 import threading
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,18 +21,18 @@ class ProcessingManifest:
     operations for classification and extraction status tracking.
     """
 
-    def __init__(self, db_path: str = "manifest.db", batch_size: int = 50):
+    def __init__(self, db_path: str = "manifest.db", batch_size: int = 50) -> None:
         self.db_path = db_path
         self.batch_size = batch_size
-        self._conn = None
+        self._conn: Optional[sqlite3.Connection] = None
         self._lock = threading.RLock()
         self._batch_counter = 0
 
-    def __enter__(self):
+    def __enter__(self) -> "ProcessingManifest":
         self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> None:
         # Force commit any pending batched operations before closing
         self.force_commit()
         self.close()
@@ -57,7 +57,7 @@ class ProcessingManifest:
 
         return self._conn
 
-    def close(self):
+    def close(self) -> None:
         """Close database connection."""
         if self._conn:
             try:
@@ -67,7 +67,7 @@ class ProcessingManifest:
             finally:
                 self._conn = None
 
-    def _create_table(self):
+    def _create_table(self) -> None:
         """Create the progress tracking table."""
         create_sql = """
         CREATE TABLE IF NOT EXISTS progress (
@@ -81,10 +81,11 @@ class ProcessingManifest:
         )
         """
         with self._lock:
-            self._conn.execute(create_sql)
-            self._conn.commit()
+            if self._conn is not None:
+                self._conn.execute(create_sql)
+                self._conn.commit()
 
-    def _retry_operation(self, operation, max_retries: int = 3):
+    def _retry_operation(self, operation: Callable[[], Any], max_retries: int = 3) -> Any:
         """Retry database operations with exponential backoff."""
         import time
         for attempt in range(max_retries):
@@ -97,73 +98,78 @@ class ProcessingManifest:
                     time.sleep(wait_time)
                 else:
                     raise
+        # This should never be reached, but satisfy type checker
+        raise RuntimeError("Retry loop completed without return")
 
-    def mark_classified(self, file_path: str, classification: str, doc_type: str = ""):
+    def mark_classified(self, file_path: str, classification: str, doc_type: str = "") -> None:
         """Mark a file as classified with its classification result."""
-        def operation():
+        def operation() -> None:
             with self._lock:
-                self._conn.execute("""
-                    INSERT OR REPLACE INTO progress 
-                    (file_path, classified, classification, doc_type, updated_at)
-                    VALUES (?, 1, ?, ?, ?)
-                """, (file_path, classification, doc_type, datetime.now().isoformat()))
+                if self._conn is not None:
+                    self._conn.execute("""
+                        INSERT OR REPLACE INTO progress 
+                        (file_path, classified, classification, doc_type, updated_at)
+                        VALUES (?, 1, ?, ?, ?)
+                    """, (file_path, classification, doc_type, datetime.now().isoformat()))
 
-                self._batch_counter += 1
-                if self._batch_counter >= self.batch_size:
-                    self._conn.commit()
-                    self._batch_counter = 0
+                    self._batch_counter += 1
+                    if self._batch_counter >= self.batch_size:
+                        self._conn.commit()
+                        self._batch_counter = 0
 
         self._retry_operation(operation)
         logger.debug(f"Marked {file_path} as classified: {classification}")
 
-    def mark_extracted(self, file_path: str):
+    def mark_extracted(self, file_path: str) -> None:
         """Mark a file as having completed extraction."""
-        def operation():
+        def operation() -> None:
             with self._lock:
-                # Use INSERT OR IGNORE followed by UPDATE to avoid race conditions
-                # First, ensure the row exists
-                self._conn.execute("""
-                    INSERT OR IGNORE INTO progress (file_path, classified, classification, doc_type, updated_at)
-                    VALUES (?, 1, '', '', ?)
-                """, (file_path, datetime.now().isoformat()))
+                if self._conn is not None:
+                    # Use INSERT OR IGNORE followed by UPDATE to avoid race conditions
+                    # First, ensure the row exists
+                    self._conn.execute("""
+                        INSERT OR IGNORE INTO progress (file_path, classified, classification, doc_type, updated_at)
+                        VALUES (?, 1, '', '', ?)
+                    """, (file_path, datetime.now().isoformat()))
 
-                # Then update the extraction status
-                self._conn.execute("""
-                    UPDATE progress 
-                    SET extracted = 1, updated_at = ?
-                    WHERE file_path = ?
-                """, (datetime.now().isoformat(), file_path))
+                    # Then update the extraction status
+                    self._conn.execute("""
+                        UPDATE progress 
+                        SET extracted = 1, updated_at = ?
+                        WHERE file_path = ?
+                    """, (datetime.now().isoformat(), file_path))
 
-                self._batch_counter += 1
-                if self._batch_counter >= self.batch_size:
-                    self._conn.commit()
-                    self._batch_counter = 0
+                    self._batch_counter += 1
+                    if self._batch_counter >= self.batch_size:
+                        self._conn.commit()
+                        self._batch_counter = 0
 
         self._retry_operation(operation)
         logger.debug(f"Marked {file_path} as extracted")
 
-    def mark_error(self, file_path: str, error_message: str):
+    def mark_error(self, file_path: str, error_message: str) -> None:
         """Mark a file as having encountered an error."""
-        def operation():
+        def operation() -> None:
             with self._lock:
-                self._conn.execute("""
-                    INSERT OR REPLACE INTO progress 
-                    (file_path, classified, classification, extracted, doc_type, last_error, updated_at)
-                    VALUES (
-                        ?,
-                        COALESCE((SELECT classified FROM progress WHERE file_path = ?), 0),
-                        COALESCE((SELECT classification FROM progress WHERE file_path = ?), ''),
-                        COALESCE((SELECT extracted FROM progress WHERE file_path = ?), 0),
-                        COALESCE((SELECT doc_type FROM progress WHERE file_path = ?), ''),
-                        ?,
-                        ?
-                    )
-                """, (file_path, file_path, file_path, file_path, file_path, error_message, datetime.now().isoformat()))
+                if self._conn is not None:
+                    self._conn.execute("""
+                        INSERT OR REPLACE INTO progress 
+                        (file_path, classified, classification, extracted, doc_type, last_error, updated_at)
+                        VALUES (
+                            ?,
+                            COALESCE((SELECT classified FROM progress WHERE file_path = ?), 0),
+                            COALESCE((SELECT classification FROM progress WHERE file_path = ?), ''),
+                            COALESCE((SELECT extracted FROM progress WHERE file_path = ?), 0),
+                            COALESCE((SELECT doc_type FROM progress WHERE file_path = ?), ''),
+                            ?,
+                            ?
+                        )
+                    """, (file_path, file_path, file_path, file_path, file_path, error_message, datetime.now().isoformat()))
 
-                self._batch_counter += 1
-                if self._batch_counter >= self.batch_size:
-                    self._conn.commit()
-                    self._batch_counter = 0
+                    self._batch_counter += 1
+                    if self._batch_counter >= self.batch_size:
+                        self._conn.commit()
+                        self._batch_counter = 0
 
         self._retry_operation(operation)
         logger.warning(f"Marked {file_path} with error: {error_message}")
@@ -179,8 +185,11 @@ class ProcessingManifest:
         if not pdf_paths:
             return [], []
 
-        def operation():
+        def operation() -> tuple[list[str], list[str]]:
             with self._lock:
+                if self._conn is None:
+                    return [], []
+                    
                 # Get current progress for all files
                 placeholders = ",".join("?" * len(pdf_paths))
                 cursor = self._conn.execute(f"""
@@ -230,12 +239,23 @@ class ProcessingManifest:
 
                 return classify_list, extract_list
 
-        return self._retry_operation(operation)
+        result: tuple[list[str], list[str]] = self._retry_operation(operation)
+        return result
 
     def get_summary(self) -> dict[str, Any]:
         """Get processing summary statistics."""
-        def operation():
+        def operation() -> dict[str, Any]:
             with self._lock:
+                if self._conn is None:
+                    return {
+                        "total_files": 0,
+                        "classified": 0,
+                        "extracted": 0,
+                        "failed": 0,
+                        "pending_extraction": 0,
+                        "pending_classification": 0
+                    }
+                    
                 cursor = self._conn.execute("""
                     SELECT 
                         COUNT(*) as total_files,
@@ -266,7 +286,8 @@ class ProcessingManifest:
                     "pending_classification": 0
                 }
 
-        return self._retry_operation(operation)
+        result: dict[str, Any] = self._retry_operation(operation)
+        return result
 
     def is_file_completed(self, file_path: str, stage: str) -> bool:
         """
@@ -279,8 +300,11 @@ class ProcessingManifest:
         Returns:
             True if the stage is completed, False otherwise
         """
-        def operation():
+        def operation() -> bool:
             with self._lock:
+                if self._conn is None:
+                    return False
+                    
                 if stage == "classification":
                     cursor = self._conn.execute("""
                         SELECT classified, last_error FROM progress 
@@ -307,22 +331,26 @@ class ProcessingManifest:
                 raise ValueError(f"Unknown stage: {stage}")
 
         try:
-            return self._retry_operation(operation)
+            result: bool = self._retry_operation(operation)
+            return result
         except Exception as e:
             logger.error(f"Error checking file completion status: {e}")
             return False
 
-    def force_commit(self):
+    def force_commit(self) -> None:
         """Force commit any pending batch operations."""
         with self._lock:
             if self._conn:
                 self._conn.commit()
                 self._batch_counter = 0
 
-    def reset_errors(self, file_paths: list[str] | None = None):
+    def reset_errors(self, file_paths: Optional[list[str]] = None) -> None:
         """Reset error status for specified files or all files."""
-        def operation():
+        def operation() -> None:
             with self._lock:
+                if self._conn is None:
+                    return
+                    
                 if file_paths:
                     # Handle empty file_paths list to avoid SQL syntax error
                     if not file_paths:
@@ -352,17 +380,17 @@ def init_db(path: str = "manifest.db") -> ProcessingManifest:
 
 
 # Convenience functions for backward compatibility
-def mark_classified(manifest: ProcessingManifest, file_path: str, classification: str, doc_type: str = ""):
+def mark_classified(manifest: ProcessingManifest, file_path: str, classification: str, doc_type: str = "") -> None:
     """Mark a file as classified."""
     manifest.mark_classified(file_path, classification, doc_type)
 
 
-def mark_extracted(manifest: ProcessingManifest, file_path: str):
+def mark_extracted(manifest: ProcessingManifest, file_path: str) -> None:
     """Mark a file as extracted."""
     manifest.mark_extracted(file_path)
 
 
-def mark_error(manifest: ProcessingManifest, file_path: str, error_message: str):
+def mark_error(manifest: ProcessingManifest, file_path: str, error_message: str) -> None:
     """Mark a file with an error."""
     manifest.mark_error(file_path, error_message)
 

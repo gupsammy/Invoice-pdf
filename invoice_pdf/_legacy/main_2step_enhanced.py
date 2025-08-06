@@ -21,6 +21,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from config import Settings
 from logging_config import setup_logging
 from core.models import ClassificationResult, classification_result_to_dict
+from core.exceptions import (
+    ClassificationError,
+    APIError, 
+    InvalidAPIResponseError,
+    PDFProcessingError,
+    ExtractionError,
+    SecurityError,
+    PathTraversalError
+)
+from core.security import validate_safe_path, validate_api_key
 from core.rate_limit import CapacityLimiter, RetryError, retry_with_backoff
 from core.pdf_utils import (
     get_page_count, 
@@ -75,6 +85,13 @@ LOG_FILE = "invoice_extraction_2step_enhanced.log"
 load_dotenv()
 settings = Settings.from_env()
 API_KEY = settings.gemini_api_key
+
+# Validate API key for security
+try:
+    validate_api_key(API_KEY)
+except SecurityError as e:
+    logging.error(f"API key validation failed: {e}")
+    sys.exit(1)
 
 # Processing Configuration
 _MAX_RETRIES = 3
@@ -250,7 +267,7 @@ async def classify_document_async(
             )
         except RetryError as e:
             logger.error(f"Classification failed after retries for {pdf_path}: {e}")
-            return None
+            raise APIError(pdf_path, e.last_exception, CLASSIFICATION_MODEL, e.attempts)
         
         # Save response for debugging (controlled by DEBUG_RESPONSES flag)
         success = False  # Will be set based on parsing success
@@ -273,7 +290,7 @@ async def classify_document_async(
                 raise RuntimeError("Transient upstream error – will retry")
             logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Unparsable response: {resp_txt[:120]}")
             save_classification_response()  # Save on failure
-            return None
+            raise InvalidAPIResponseError(pdf_path, resp_txt, CLASSIFICATION_MODEL)
         
         try:
             # Cache JSON string once for both parsing attempts
@@ -441,7 +458,7 @@ async def extract_document_data_async(
             )
         except RetryError as e:
             logger.error(f"Extraction failed after retries for {pdf_path}: {e}")
-            return None
+            raise APIError(pdf_path, e.last_exception, EXTRACTION_MODEL, e.attempts)
         
         # Save response for debugging in appropriate subfolder
         # Save response for debugging (controlled by DEBUG_RESPONSES flag)
@@ -527,8 +544,13 @@ async def classify_document_with_metadata(
     Returns:
         Tuple of (pdf_path, classification_result)
     """
-    result = await classify_document_async(pdf_path, client, semaphore, json_responses_folder)
-    return pdf_path, result
+    try:
+        result = await classify_document_async(pdf_path, client, semaphore, json_responses_folder)
+        return pdf_path, result
+    except (APIError, InvalidAPIResponseError, PDFProcessingError) as e:
+        # Log the structured error but return None for backward compatibility during transition
+        logging.error(f"Classification error for {pdf_path}: {e}")
+        return pdf_path, None
 
 async def extract_document_with_metadata(
     pdf_path: str,
@@ -543,8 +565,13 @@ async def extract_document_with_metadata(
     Returns:
         Tuple of ((pdf_path, document_type), extraction_result)
     """
-    result = await extract_document_data_async(pdf_path, document_type, client, semaphore, json_responses_folder)
-    return (pdf_path, document_type), result
+    try:
+        result = await extract_document_data_async(pdf_path, document_type, client, semaphore, json_responses_folder)
+        return (pdf_path, document_type), result
+    except (APIError, InvalidAPIResponseError, ExtractionError) as e:
+        # Log the structured error but return None for backward compatibility during transition
+        logging.error(f"Extraction error for {pdf_path} ({document_type}): {e}")
+        return (pdf_path, document_type), None
 
 async def process_files_batch(
     files: List[Union[str, Tuple[str, str]]],
@@ -1889,7 +1916,14 @@ async def setup_processing_environment(
             dirs[:] = [d for d in dirs if d not in ["dup", "__pycache__"]]
             for file in files:
                 if file.lower().endswith('.pdf'):
-                    pdf_files.append(os.path.join(root, file))
+                    full_path = os.path.join(root, file)
+                    # Validate path for security
+                    try:
+                        validated_path = validate_safe_path(full_path)
+                        pdf_files.append(str(validated_path))
+                    except (PathTraversalError, SecurityError) as e:
+                        logging.warning(f"Skipping unsafe path {full_path}: {e}")
+                        continue
         
         if not pdf_files:
             logging.warning(f"No PDF files found in '{input_folder}'. Exiting.")

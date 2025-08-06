@@ -197,7 +197,6 @@ def with_retry(
         return wrapper
     return decorator
 
-
 class RateLimitedExecutor:
     """Executor that combines capacity limiting and retry logic."""
 
@@ -278,4 +277,5 @@ def create_pdf_executor(fd_limit: int = 50) -> RateLimitedExecutor:
         max_delay=5.0,
         jitter_range=1.0
     )
+
 
