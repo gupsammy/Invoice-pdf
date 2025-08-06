@@ -244,9 +244,8 @@ async def classify_document_async(
     # Check manifest to see if already classified (when resume mode is active)
     global processing_manifest, pause_event, shutdown_event
     if processing_manifest:
-        # Get resume queues to check if this file needs classification
-        classify_list, _ = processing_manifest.get_resume_queues([pdf_path])
-        if pdf_path not in classify_list:
+        # Use efficient single-file check instead of querying all files
+        if processing_manifest.is_file_completed(pdf_path, 'classification'):
             # Already classified, skip
             logging.debug(f"[CLASSIFY] {pdf_path_obj.name} - Already classified, skipping")
             return None
@@ -429,9 +428,8 @@ async def extract_document_data_async(
     # Check manifest to see if already extracted (when resume mode is active)
     global processing_manifest, pause_event, shutdown_event
     if processing_manifest:
-        # Get resume queues to check if this file needs extraction
-        _, extract_list = processing_manifest.get_resume_queues([pdf_path])
-        if pdf_path not in extract_list:
+        # Use efficient single-file check instead of querying all files
+        if processing_manifest.is_file_completed(pdf_path, 'extraction'):
             # Already extracted, skip
             logging.debug(f"[EXTRACT] {pdf_path_obj.name} - Already extracted, skipping")
             return None

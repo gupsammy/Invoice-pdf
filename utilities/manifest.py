@@ -264,6 +264,51 @@ class ProcessingManifest:
         
         return self._retry_operation(operation)
     
+    def is_file_completed(self, file_path: str, stage: str) -> bool:
+        """
+        Check if a specific file has completed a specific stage efficiently.
+        
+        Args:
+            file_path: Path to the file
+            stage: Either 'classification' or 'extraction'
+            
+        Returns:
+            True if the stage is completed, False otherwise
+        """
+        def operation():
+            with self._lock:
+                if stage == 'classification':
+                    cursor = self._conn.execute("""
+                        SELECT classified, last_error FROM progress 
+                        WHERE file_path = ? AND classified = 1
+                    """, (file_path,))
+                    result = cursor.fetchone()
+                    return result is not None and not result[1]  # classified and no error
+                    
+                elif stage == 'extraction':
+                    cursor = self._conn.execute("""
+                        SELECT extracted, classification, last_error FROM progress 
+                        WHERE file_path = ? AND extracted = 1
+                    """, (file_path,))
+                    result = cursor.fetchone()
+                    if result is None:
+                        # Check if it's irrelevant (auto-extracted)
+                        cursor = self._conn.execute("""
+                            SELECT classification FROM progress 
+                            WHERE file_path = ? AND classified = 1 AND classification = 'irrelevant'
+                        """, (file_path,))
+                        return cursor.fetchone() is not None
+                    return True
+                    
+                else:
+                    raise ValueError(f"Unknown stage: {stage}")
+        
+        try:
+            return self._retry_operation(operation)
+        except Exception as e:
+            logger.error(f"Error checking file completion status: {e}")
+            return False
+
     def force_commit(self):
         """Force commit any pending batch operations."""
         with self._lock:
