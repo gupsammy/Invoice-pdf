@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import csv
 import time
@@ -13,6 +14,12 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 from dotenv import load_dotenv
 from tqdm import tqdm
+
+# Import new config system
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+from config import Settings
+from logging_config import setup_logging
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
@@ -55,14 +62,19 @@ COMBINED_CSV_FILE = "combined_enhanced_results.csv"
 FAILED_CSV_FILE = "failed_enhanced_files.csv"
 LOG_FILE = "invoice_extraction_2step_enhanced.log"
 
+# Load environment variables and initialize settings first
+load_dotenv()
+settings = Settings.from_env()
+API_KEY = settings.gemini_api_key
+
 # Processing Configuration
 _MAX_RETRIES = 3
 _RETRY_DELAY_BASE_SECONDS = 10
 # Phase 1 Optimization: Single quota semaphore for API rate limiting
 QUOTA_LIMIT = 10  # Single-key AFC limit (combined for classification + extraction)
-PROCESSING_CHUNK_SIZE = int(os.getenv("PROCESSING_CHUNK_SIZE", "500"))
+PROCESSING_CHUNK_SIZE = settings.processing_chunk_size
 # Phase 2 Optimization: Response dump control
-SAVE_RESPONSES = os.getenv("DEBUG_RESPONSES", "0") == "1"
+SAVE_RESPONSES = settings.debug_responses
 # Phase 4 Optimization: PDF file descriptor guard
 PDF_FD_SEMAPHORE_LIMIT = 50
 
@@ -76,28 +88,11 @@ EXTRACTION_MODEL = "gemini-2.5-pro"
 MAX_CONCURRENT_CLASSIFY = 5   # Max concurrent classification tasks
 MAX_CONCURRENT_EXTRACT = 3    # Max concurrent extraction tasks
 
-def setup_logging(logs_folder):
-    """Set up logging with the specified logs folder."""
-    os.makedirs(logs_folder, exist_ok=True)
-    
-    # Clear any existing handlers
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-    
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(os.path.join(logs_folder, LOG_FILE)),
-            logging.StreamHandler()
-        ]
-    )
+# Legacy setup_logging function replaced with new config system
+# This is now handled by logging_config.py
+pass
 
-# Load environment variables
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
-if not API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in environment variables. Please set it in a .env file.")
+# Settings already initialized above
 
 # Module-level PDF file descriptor semaphore (Phase 4 optimization)
 # Will be initialized in main()
@@ -1927,8 +1922,8 @@ async def setup_processing_environment(
     os.makedirs(logs_folder, exist_ok=True)
     os.makedirs(base_json_responses_folder, exist_ok=True)
     
-    # Set up logging
-    setup_logging(logs_folder)
+    # Set up logging using new config system
+    setup_logging(Path(logs_folder), LOG_FILE)
     
     # Clear old response artifacts for this input folder (SKIP IN RESUME MODE)
     if not resume_extraction and os.path.exists(json_responses_folder):
@@ -1984,7 +1979,7 @@ async def setup_processing_environment(
         }
     )
     
-    if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true":
+    if settings.use_vertex_ai:
         client = genai.Client(http_options=http_options)
         logging.info("🔐 Using Vertex AI with Application Default Credentials + aiohttp transport")
     else:
@@ -2684,13 +2679,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Set up basic logging
-    setup_logging(args.logs)
+    setup_logging(Path(args.logs), LOG_FILE)
     
     # Log configuration
-    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+    use_vertex = settings.use_vertex_ai
     if use_vertex:
-        project = os.getenv("GOOGLE_CLOUD_PROJECT", "not-set")
-        location = os.getenv("GOOGLE_CLOUD_LOCATION", "not-set")
+        project = settings.google_cloud_project
+        location = settings.google_cloud_location
         logging.info(f"🚀 Starting Enhanced 2-Step Pipeline with Vertex AI - Project: {project}, Location: {location}")
     else:
         logging.info("🚀 Starting Enhanced 2-Step Pipeline with regular Gemini API")

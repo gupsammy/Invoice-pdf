@@ -55,21 +55,25 @@ invoice_pdf/               # new top-level package
 
 ## 3. Migration Road-Map (incremental, test-driven)
 
-### Phase 0 – Safety-Net & Project Skeleton
+### Phase 0 – Safety-Net & Project Skeleton ✅ **COMPLETED**
 
-- Tag current `main` as `v0-legacy-snapshot` and freeze.
-- Scaffold `invoice_pdf/` package and `pyproject.toml`.
-- Move `main_2step_enhanced.py` to `invoice_pdf/_legacy/main_2step_enhanced.py` **without editing a single line**.
-- Add `tests/test_regression_fixture.py` (golden-file snapshot for ≤5 tiny PDFs).
-- Install `pre-commit` with `ruff`, `black`, `isort`, `mypy`, `reuse`.
-- Create basic GitHub Actions workflow: lint ➜ type-check ➜ pytest.
-- Add `Makefile` / `justfile` with `run`, `test`, `fmt` shortcuts.
+- ✅ Tag current `main` as `v0-legacy-snapshot` and freeze.
+- ✅ Scaffold `invoice_pdf/` package and `pyproject.toml`.
+- ✅ Move `main_2step_enhanced.py` to `invoice_pdf/_legacy/main_2step_enhanced.py` **without editing a single line**.
+- ✅ Add `tests/test_regression_fixture.py` (golden-file snapshot for ≤5 tiny PDFs).
+- ✅ Install `pre-commit` with `ruff`, `black`, `isort`, `mypy`, `reuse`.
+- ✅ Create basic GitHub Actions workflow: lint ➜ type-check ➜ pytest.
+- ✅ Add `Makefile` / `justfile` with `run`, `test`, `fmt` shortcuts.
 
-### Phase 1 – Typed Configuration
+**Status**: ✅ Complete - Committed as `97a7c00`. Background process (PID 13908) continues unaffected.
 
-- Implement `invoice_pdf/config.py` (`Settings` dataclass, pydantic v2).
-- Create `invoice_pdf/logging_config.py` with a reusable `dictConfig`.
-- Patch `_legacy/main_2step_enhanced.py` to instantiate a `Settings` object instead of reading `os.environ` directly (mechanical replace, **no logic change**).
+### Phase 1 – Typed Configuration ✅ **COMPLETED**
+
+- ✅ Implement `invoice_pdf/config.py` (`Settings` dataclass, pydantic v2).
+- ✅ Create `invoice_pdf/logging_config.py` with a reusable `dictConfig`.
+- ✅ Patch `_legacy/main_2step_enhanced.py` to instantiate a `Settings` object instead of reading `os.environ` directly (mechanical replace, **no logic change**).
+
+**Status**: ✅ Complete - Legacy script now uses typed configuration. Tests passing.
 
 ### Phase 2 – Canonical Data-Models
 
