@@ -17,7 +17,7 @@ T = TypeVar("T")
 
 class RetryError(Exception):
     """Raised when all retry attempts are exhausted."""
-    
+
     def __init__(self, operation_name: str, last_exception: Exception, attempts: int):
         self.operation_name = operation_name
         self.last_exception = last_exception
@@ -36,6 +36,7 @@ class CapacityLimiter:
     def __init__(self, total_tokens: int):
         """Initialize capacity limiter with total capacity."""
         self.total_tokens = total_tokens
+        self._available = total_tokens  # Track explicitly to avoid private attribute access
         if anyio:
             self._limiter = anyio.CapacityLimiter(total_tokens)
         else:
@@ -47,6 +48,7 @@ class CapacityLimiter:
             await self._limiter.__aenter__()
         else:
             await self._semaphore.__aenter__()
+        self._available -= 1  # Track token acquisition
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -55,20 +57,21 @@ class CapacityLimiter:
             await self._limiter.__aexit__(exc_type, exc_val, exc_tb)
         else:
             await self._semaphore.__aexit__(exc_type, exc_val, exc_tb)
+        self._available += 1  # Track token release
 
     @property
     def available_tokens(self) -> int:
         """Get available tokens/capacity."""
         if anyio:
             return self._limiter.available_tokens
-        return self._semaphore._value
+        return self._available  # Use our tracking, not private attribute
 
     @property
     def borrowed_tokens(self) -> int:
         """Get borrowed tokens/capacity."""
         if anyio:
             return self._limiter.borrowed_tokens
-        return self.total_tokens - self._semaphore._value
+        return self.total_tokens - self._available  # Use our tracking
 
 
 async def retry_with_backoff(
@@ -149,7 +152,7 @@ async def retry_with_backoff(
         operation_desc = operation_name or "operation"
         logger.error(f"[RETRY] {operation_desc} - Unexpected retry loop exit")
         raise RetryError(operation_desc, last_exception, max_retries)
-    
+
     # This should never happen, but ensure type safety
     raise RetryError(operation_name or "operation", Exception("Unknown error"), max_retries)
 

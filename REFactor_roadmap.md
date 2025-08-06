@@ -110,7 +110,7 @@ invoice_pdf/               # new top-level package
 - ✅ Migrate calls in `_legacy`.
 - ✅ Unit-test with tiny fixture PDFs.
 
-**Status**: ✅ Complete - Committed as `[TBD]`. All tests passing (67/67). Background process (PID 13908) continues unaffected.
+**Status**: ✅ Complete - Committed as `4fc32f3`. All tests passing (67/67). Background process (PID 13908) continues unaffected.
 
 **Technical Details for Future Reference:**
 - `get_page_count()` and `extract_first_n_pages()` functions provide pure PDF operations
@@ -212,7 +212,7 @@ invoice_pdf/               # new top-level package
 
 > **Start Phase 5:** Move `utilities/manifest.py` → `invoice_pdf/io/manifest.py` and `utilities/streaming_csv.py` → `invoice_pdf/io/csv_stream.py`. Provide shim import in `_legacy` to avoid mass rename diff. Add migration tests verifying resume works.
 
-## 9. Current Status (as of commit [TBD])
+## 9. Current Status (as of commit 4fc32f3)
 
 **✅ Completed Phases:** 0, 1, 2, 3, 4
 **🔄 Next Phase:** 5 (Persistence Layer Early)  

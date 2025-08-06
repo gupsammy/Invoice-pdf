@@ -1,25 +1,18 @@
 """Tests for data models."""
 import json
+
 import pytest
-from datetime import datetime
-from pathlib import Path
 
 from invoice_pdf.core.models import (
     ClassificationResult,
-    VendorExtractionResult,
-    EmployeeExtractionResult,
-    DocumentType,
-    InvoiceType,
     CurrencyCode,
-    CalculationMethod,
-    DocumentStatus,
-    VendorExtractionData,
-    EmployeeExtractionData,
-    RegistrationNumber,
+    DocumentType,
+    EmployeeExtractionResult,
+    InvoiceType,
     ProcessingResult,
+    RegistrationNumber,
+    VendorExtractionResult,
     classification_result_to_dict,
-    vendor_extraction_result_to_dict,
-    employee_extraction_result_to_dict,
 )
 
 
@@ -135,7 +128,7 @@ def sample_employee_extraction_data():
 def test_classification_result_creation(sample_classification_data):
     """Test ClassificationResult model creation and validation."""
     result = ClassificationResult(**sample_classification_data)
-    
+
     assert result.file_name == "test_invoice.pdf"
     assert result.classification == DocumentType.VENDOR_INVOICE
     assert result.confidence == 0.95
@@ -148,12 +141,12 @@ def test_classification_result_creation(sample_classification_data):
 def test_classification_result_json_roundtrip(sample_classification_data):
     """Test JSON serialization and deserialization."""
     result = ClassificationResult(**sample_classification_data)
-    
+
     # Convert to JSON and back
     json_str = result.model_dump_json()
     result_dict = json.loads(json_str)
     result_restored = ClassificationResult(**result_dict)
-    
+
     assert result.file_name == result_restored.file_name
     assert result.classification == result_restored.classification
     assert result.confidence == result_restored.confidence
@@ -163,7 +156,7 @@ def test_classification_result_to_dict_conversion(sample_classification_data):
     """Test conversion to legacy dict format."""
     result = ClassificationResult(**sample_classification_data)
     legacy_dict = classification_result_to_dict(result)
-    
+
     # Check that all original fields are present
     assert legacy_dict["file_name"] == "test_invoice.pdf"
     assert legacy_dict["classification"] == "vendor_invoice"
@@ -174,12 +167,12 @@ def test_classification_result_to_dict_conversion(sample_classification_data):
 def test_vendor_extraction_result_creation(sample_vendor_extraction_data):
     """Test VendorExtractionResult model creation."""
     result = VendorExtractionResult(**sample_vendor_extraction_data)
-    
+
     assert result.file_name == "vendor_invoice.pdf"
     assert result.extraction_model == "gemini-2.5-pro"
     assert result.document_status.readable == True
     assert len(result.extracted_data) == 1
-    
+
     extract_data = result.extracted_data[0]
     assert extract_data.vendor_name == "ABC Corporation"
     assert extract_data.total_amount == 11800.0
@@ -190,12 +183,12 @@ def test_vendor_extraction_result_creation(sample_vendor_extraction_data):
 def test_vendor_extraction_json_roundtrip(sample_vendor_extraction_data):
     """Test vendor extraction JSON roundtrip."""
     result = VendorExtractionResult(**sample_vendor_extraction_data)
-    
+
     # Convert to JSON and back
     json_str = result.model_dump_json()
     result_dict = json.loads(json_str)
     result_restored = VendorExtractionResult(**result_dict)
-    
+
     assert result.file_name == result_restored.file_name
     assert result.extracted_data[0].vendor_name == result_restored.extracted_data[0].vendor_name
     assert result.extracted_data[0].total_amount == result_restored.extracted_data[0].total_amount
@@ -204,12 +197,12 @@ def test_vendor_extraction_json_roundtrip(sample_vendor_extraction_data):
 def test_employee_extraction_result_creation(sample_employee_extraction_data):
     """Test EmployeeExtractionResult model creation."""
     result = EmployeeExtractionResult(**sample_employee_extraction_data)
-    
+
     assert result.file_name == "employee_te.pdf"
     assert result.extraction_model == "gemini-2.5-pro"
     assert result.document_status.readable == True
     assert len(result.extracted_data) == 1
-    
+
     extract_data = result.extracted_data[0]
     assert extract_data.employee_name == "John Doe"
     assert extract_data.employee_code == "EMP001"
@@ -219,12 +212,12 @@ def test_employee_extraction_result_creation(sample_employee_extraction_data):
 def test_employee_extraction_json_roundtrip(sample_employee_extraction_data):
     """Test employee extraction JSON roundtrip."""
     result = EmployeeExtractionResult(**sample_employee_extraction_data)
-    
+
     # Convert to JSON and back
     json_str = result.model_dump_json()
     result_dict = json.loads(json_str)
     result_restored = EmployeeExtractionResult(**result_dict)
-    
+
     assert result.file_name == result_restored.file_name
     assert result.extracted_data[0].employee_name == result_restored.extracted_data[0].employee_name
     assert result.extracted_data[0].total_amount == result_restored.extracted_data[0].total_amount
@@ -242,13 +235,13 @@ def test_processing_result_composite():
         total_pages_in_pdf=1,
         pages_analyzed=1
     )
-    
+
     result = ProcessingResult(
         file_name="test.pdf",
         file_path="/test.pdf",
         classification_result=classification
     )
-    
+
     assert result.is_successful == True
     assert result.document_type == DocumentType.VENDOR_INVOICE
 
@@ -257,13 +250,13 @@ def test_legacy_compatibility_functions(sample_classification_data):
     """Test legacy compatibility conversion functions."""
     result = ClassificationResult(**sample_classification_data)
     legacy_dict = classification_result_to_dict(result)
-    
+
     # Should contain all expected legacy fields
     expected_fields = [
         "file_name", "file_path", "classification", "confidence",
         "has_vendor_letterhead", "has_invoice_numbers", "appears_financial"
     ]
-    
+
     for field in expected_fields:
         assert field in legacy_dict
 
@@ -282,7 +275,7 @@ def test_validation_errors():
             total_pages_in_pdf=1,
             pages_analyzed=1
         )
-    
+
     # Test pages analyzed exceeding total pages
     result = ClassificationResult(
         file_name="test.pdf",
@@ -300,15 +293,15 @@ def test_validation_errors():
 def test_registration_number_model():
     """Test RegistrationNumber model."""
     reg = RegistrationNumber(type="GSTIN", value="27ABCDE1234F1Z5")
-    
+
     assert reg.type == "GSTIN"
     assert reg.value == "27ABCDE1234F1Z5"
-    
+
     # JSON roundtrip
     json_str = reg.model_dump_json()
     reg_dict = json.loads(json_str)
     reg_restored = RegistrationNumber(**reg_dict)
-    
+
     assert reg.type == reg_restored.type
     assert reg.value == reg_restored.value
 
@@ -318,11 +311,11 @@ def test_enum_values():
     # Test DocumentType enum
     assert DocumentType.VENDOR_INVOICE.value == "vendor_invoice"
     assert DocumentType.EMPLOYEE_TE.value == "employee_t&e"
-    
+
     # Test InvoiceType enum
     assert InvoiceType.INVOICE.value == "invoice"
     assert InvoiceType.DEBIT_NOTE.value == "debit_note"
-    
+
     # Test CurrencyCode enum
     assert CurrencyCode.INR.value == "INR"
     assert CurrencyCode.USD.value == "USD"
@@ -341,7 +334,7 @@ def test_model_defaults():
         total_pages_in_pdf=1,
         pages_analyzed=1
     )
-    
+
     # Check defaults
     assert result.key_indicators == []
     assert result.classification_notes == ""
@@ -363,7 +356,7 @@ def test_backwards_compatibility_dict_creation():
         "has_vendor_letterhead": True,
         "appears_financial": True
     }
-    
+
     # Should work with legacy dict
     result = ClassificationResult(**legacy_data)
     assert result.file_name == "legacy.pdf"

@@ -24,17 +24,17 @@ def test_classification_result_legacy_dict_compatibility():
         has_vendor_letterhead=True,
         appears_financial=True
     )
-    
+
     # Convert to dict as legacy code expects
     legacy_dict = classification_result_to_dict(result)
-    
+
     # Verify all expected fields are present
     assert legacy_dict["file_name"] == "test.pdf"
     assert legacy_dict["classification"] == "vendor_invoice"
     assert legacy_dict["confidence"] == 0.85
     assert legacy_dict["has_vendor_letterhead"] == True
     assert legacy_dict["appears_financial"] == True
-    
+
     # Should be serializable (CSV writers need this)
     import json
     json_str = json.dumps(legacy_dict, default=str)
@@ -44,19 +44,19 @@ def test_classification_result_legacy_dict_compatibility():
 def test_preprocessing_failure_result_creation():
     """Test preprocessing failure result creation as it would be used in legacy code."""
     from invoice_pdf._legacy.main_2step_enhanced import create_preprocessing_failure_result
-    
+
     # This should return a ClassificationResult
     result = create_preprocessing_failure_result("/path/to/failed.pdf", "Cannot read PDF")
-    
+
     # Check attributes instead of isinstance due to potential module loading issues
-    assert hasattr(result, 'classification')
-    assert hasattr(result, 'confidence')
-    assert hasattr(result, 'file_name')
+    assert hasattr(result, "classification")
+    assert hasattr(result, "confidence")
+    assert hasattr(result, "file_name")
     assert result.classification.value == "processing_failed"
     assert result.confidence == 1.0
     assert "Cannot read PDF" in result.reasoning
     assert result.total_pages_in_pdf == 0
-    
+
     # Should convert to legacy dict properly
     legacy_dict = classification_result_to_dict(result)
     assert legacy_dict["classification"] == "processing_failed"
@@ -77,7 +77,7 @@ def test_pydantic_validation_in_classification():
         pages_analyzed=1
     )
     assert result.confidence == 0.5
-    
+
     # Invalid confidence should be caught
     with pytest.raises(ValueError):
         ClassificationResult(
@@ -104,11 +104,11 @@ def test_enum_handling_in_classification():
         total_pages_in_pdf=1,
         pages_analyzed=1
     )
-    
+
     # Should convert to proper enum
     assert result.classification == DocumentType.VENDOR_INVOICE
     assert isinstance(result.classification, DocumentType)
-    
+
     # Should serialize back to string
     legacy_dict = classification_result_to_dict(result)
     assert legacy_dict["classification"] == "vendor_invoice"
@@ -131,15 +131,15 @@ def test_backwards_compatibility_with_existing_data():
         "appears_financial": True,
         "primary_document_type": "employee_expense_form"
     }
-    
+
     # Should work with existing data
     result = ClassificationResult(**legacy_classification_data)
-    
+
     assert result.file_name == "invoice123.pdf"
     assert result.classification == DocumentType.EMPLOYEE_TE
     assert result.has_employee_codes == True
     assert result.has_travel_dates == True
-    
+
     # Convert back should preserve all data
     converted = classification_result_to_dict(result)
     assert converted["file_name"] == "invoice123.pdf"

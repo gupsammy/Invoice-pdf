@@ -2,14 +2,14 @@
 import logging
 import logging.config
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
-def get_logging_config(logs_folder: Path, log_filename: str = "invoice_extraction_2step_enhanced.log") -> Dict[str, Any]:
+def get_logging_config(logs_folder: Path, log_filename: str = "invoice_extraction_2step_enhanced.log") -> dict[str, Any]:
     """Get logging configuration dictionary."""
     logs_folder.mkdir(parents=True, exist_ok=True)
     log_file_path = logs_folder / log_filename
-    
+
     return {
         "version": 1,
         "disable_existing_loggers": False,
@@ -54,10 +54,10 @@ def get_logging_config(logs_folder: Path, log_filename: str = "invoice_extractio
 def setup_logging(logs_folder: Path, log_filename: str = "invoice_extraction_2step_enhanced.log") -> None:
     """Set up logging with the specified configuration."""
     config = get_logging_config(logs_folder, log_filename)
-    
+
     # Clear any existing handlers to prevent duplicate logs
     root_logger = logging.getLogger()
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     logging.config.dictConfig(config)

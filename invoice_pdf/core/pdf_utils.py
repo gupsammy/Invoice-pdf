@@ -6,6 +6,8 @@ and used across the application. All functions are synchronous and thread-safe.
 
 import asyncio
 import logging
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -17,6 +19,29 @@ LARGE_FILE_THRESHOLD_BYTES = 20_000_000
 
 # Global PDF file descriptor semaphore - will be initialized by main application
 pdf_fd_semaphore: CapacityLimiter | None = None
+
+
+@contextmanager
+def open_pdf(path: Path | str) -> Generator[fitz.Document, None, None]:
+    """Context manager for safe PDF handling.
+
+    Ensures PDF documents are properly closed after use to prevent
+    resource leaks and memory issues.
+
+    Args:
+        path: Path to the PDF file
+
+    Yields:
+        Opened PDF document
+
+    Raises:
+        Exception: If PDF cannot be opened
+    """
+    doc = fitz.open(str(path))
+    try:
+        yield doc
+    finally:
+        doc.close()
 
 
 def get_page_count(pdf_path: Path | str) -> int:
@@ -32,11 +57,8 @@ def get_page_count(pdf_path: Path | str) -> int:
         Exception: If PDF cannot be opened or read
     """
     try:
-        doc = fitz.open(str(pdf_path))
-        try:
+        with open_pdf(pdf_path) as doc:
             return len(doc)
-        finally:
-            doc.close()
     except Exception:
         logging.exception("Error getting page count for %s", pdf_path)
         return 0
@@ -64,9 +86,7 @@ def extract_first_n_pages(pdf_path: Path | str, max_pages: int) -> bytes:
         file_size = pdf_path.stat().st_size
 
         # Open the source PDF
-        source_doc = fitz.open(str(pdf_path))
-
-        try:
+        with open_pdf(pdf_path) as source_doc:
             # Determine pages to extract
             pages_to_copy = min(len(source_doc), max_pages)
 
@@ -74,10 +94,9 @@ def extract_first_n_pages(pdf_path: Path | str, max_pages: int) -> bytes:
             if pages_to_copy == len(source_doc):
                 # If we need all pages from a large file, stream directly without loading into memory
                 if file_size > LARGE_FILE_THRESHOLD_BYTES:
-                    source_doc.close()
                     # Return file bytes directly without PyMuPDF processing
                     return pdf_path.read_bytes()
-                
+
                 # Small file - use existing logic
                 return source_doc.tobytes()
 
@@ -89,8 +108,6 @@ def extract_first_n_pages(pdf_path: Path | str, max_pages: int) -> bytes:
                 return new_doc.tobytes()
             finally:
                 new_doc.close()
-        finally:
-            source_doc.close()
 
     except Exception:
         logging.exception("Error extracting first %s pages from %s", max_pages, pdf_path)
@@ -154,4 +171,3 @@ def initialize_pdf_semaphore(limit: int) -> None:
     """
     global pdf_fd_semaphore
     pdf_fd_semaphore = CapacityLimiter(limit)
-
