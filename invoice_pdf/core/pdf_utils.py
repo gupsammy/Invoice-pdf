@@ -6,15 +6,14 @@ and used across the application. All functions are synchronous and thread-safe.
 
 import asyncio
 import logging
-import os
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
 import fitz  # PyMuPDF
 
+from .exceptions import InvalidPDFError, PDFReadError, PDFTooLargeError
 from .rate_limit import CapacityLimiter
-from .exceptions import PDFTooLargeError, InvalidPDFError, PDFReadError
 
 # Memory safety threshold for large PDF files (20MB)
 LARGE_FILE_THRESHOLD_BYTES = 20_000_000
@@ -41,20 +40,20 @@ def check_pdf_size_safety(file_path: Path | str, max_size_mb: float = 100.0) -> 
         file_path = Path(file_path)
         if not file_path.exists():
             raise FileNotFoundError(f"PDF file not found: {file_path}")
-        
+
         file_size_bytes = file_path.stat().st_size
         file_size_mb = file_size_bytes / (1024 * 1024)
-        
+
         logging.debug(f"PDF size check: {file_path.name} = {file_size_mb:.1f}MB")
-        
+
         if file_size_mb > max_size_mb:
             raise PDFTooLargeError(file_path, file_size_mb, max_size_mb)
-            
+
         # Return whether file is considered "safe" (under warning threshold)
         is_safe = file_size_mb <= (max_size_mb * 0.5)  # 50% of max
-        
+
         return file_size_mb, is_safe
-        
+
     except OSError as e:
         raise PDFReadError(file_path, e)
 
@@ -75,29 +74,29 @@ def get_memory_efficient_pdf_reader(file_path: Path | str, max_size_mb: float = 
         PDFReadError: If unable to read file
     """
     file_path = Path(file_path)
-    
+
     # Check file size first
     file_size_mb, is_safe = check_pdf_size_safety(file_path, max_size_mb)
-    
+
     if not is_safe:
         logging.warning(f"Large PDF detected: {file_path.name} ({file_size_mb:.1f}MB)")
-    
+
     try:
         # Open with memory-friendly settings for large files
         doc = fitz.open(file_path)
-        
+
         # Validate PDF is readable
         try:
             page_count = doc.page_count
             if page_count == 0:
                 raise InvalidPDFError(file_path, "PDF has no pages")
-                
+
         except Exception as e:
             doc.close()
             raise InvalidPDFError(file_path, f"Unable to read PDF pages: {e}")
-            
+
         return doc
-        
+
     except fitz.FileDataError as e:
         raise InvalidPDFError(file_path, f"PDF file is corrupted: {e}")
     except fitz.FileNotFoundError:
@@ -172,7 +171,7 @@ def extract_first_n_pages(pdf_path: Path | str, max_pages: int, max_size_mb: flo
         PDFReadError: If PDF cannot be read
     """
     pdf_path = Path(pdf_path)
-    
+
     # Check file size and get memory safety info
     file_size_mb, is_safe = check_pdf_size_safety(pdf_path, max_size_mb)
     file_size = pdf_path.stat().st_size
@@ -197,7 +196,7 @@ def extract_first_n_pages(pdf_path: Path | str, max_pages: int, max_size_mb: flo
         # Create a new document and copy pages
         if not is_safe:
             logging.warning(f"Extracting pages from large PDF: {pdf_path.name} ({file_size_mb:.1f}MB)")
-            
+
         new_doc = fitz.open()
         try:
             new_doc.insert_pdf(source_doc, from_page=0, to_page=pages_to_copy - 1)

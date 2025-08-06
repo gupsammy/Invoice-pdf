@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     # Debug Configuration
     debug_responses: bool = Field(default=False, description="Save API responses for debugging")
-    
+
     # Memory Safety Configuration
     max_pdf_size_mb: float = Field(default=100.0, description="Maximum PDF file size in MB")
     stream_large_pdfs: bool = Field(default=True, description="Use streaming for PDFs larger than half max size")

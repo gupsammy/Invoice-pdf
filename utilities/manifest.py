@@ -8,8 +8,9 @@ the progress of PDF processing through classification and extraction steps.
 import logging
 import sqlite3
 import threading
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class ProcessingManifest:
     def __init__(self, db_path: str = "manifest.db", batch_size: int = 50) -> None:
         self.db_path = db_path
         self.batch_size = batch_size
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
         self._lock = threading.RLock()
         self._batch_counter = 0
 
@@ -32,7 +33,7 @@ class ProcessingManifest:
         self.connect()
         return self
 
-    def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> None:
+    def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any | None) -> None:
         # Force commit any pending batched operations before closing
         self.force_commit()
         self.close()
@@ -189,7 +190,7 @@ class ProcessingManifest:
             with self._lock:
                 if self._conn is None:
                     return [], []
-                    
+
                 # Get current progress for all files
                 placeholders = ",".join("?" * len(pdf_paths))
                 cursor = self._conn.execute(f"""
@@ -255,7 +256,7 @@ class ProcessingManifest:
                         "pending_extraction": 0,
                         "pending_classification": 0
                     }
-                    
+
                 cursor = self._conn.execute("""
                     SELECT 
                         COUNT(*) as total_files,
@@ -304,7 +305,7 @@ class ProcessingManifest:
             with self._lock:
                 if self._conn is None:
                     return False
-                    
+
                 if stage == "classification":
                     cursor = self._conn.execute("""
                         SELECT classified, last_error FROM progress 
@@ -344,13 +345,13 @@ class ProcessingManifest:
                 self._conn.commit()
                 self._batch_counter = 0
 
-    def reset_errors(self, file_paths: Optional[list[str]] = None) -> None:
+    def reset_errors(self, file_paths: list[str] | None = None) -> None:
         """Reset error status for specified files or all files."""
         def operation() -> None:
             with self._lock:
                 if self._conn is None:
                     return
-                    
+
                 if file_paths:
                     # Handle empty file_paths list to avoid SQL syntax error
                     if not file_paths:

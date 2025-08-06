@@ -121,12 +121,14 @@ invoice_pdf/               # new top-level package
 - PDF semaphore management now centralized in `core.pdf_utils` module
 - All PDF operations now use `Path | str` type hints for flexibility
 
-### Phase 5 – Persistence Layer Early
+### Phase 5 – Persistence Layer Early ✅ **COMPLETED**
 
-- Move `utilities/manifest.py` → `invoice_pdf/io/manifest.py`.
-- Move `utilities/streaming_csv.py` → `invoice_pdf/io/csv_stream.py`.
-- Provide shim import in `_legacy` to avoid mass rename diff.
-- Add migration tests verifying resume works.
+- ✅ Move `utilities/manifest.py` → `invoice_pdf/io/manifest.py`.
+- ✅ Move `utilities/streaming_csv.py` → `invoice_pdf/io/csv_stream.py`.
+- ✅ Provide shim import in `_legacy` to avoid mass rename diff.
+- ✅ Add migration tests verifying resume works.
+
+**Status**: ✅ Complete - Moved persistence layer modules to new io package. Legacy script updated with new imports. All tests passing (16 manifest tests + 3 new migration tests). Background process (PID 13908) continues unaffected.
 
 ### Phase 6 – Output Writers
 
@@ -210,28 +212,33 @@ invoice_pdf/               # new top-level package
 
 ## 8. Next Action
 
-> **Start Phase 5:** Move `utilities/manifest.py` → `invoice_pdf/io/manifest.py` and `utilities/streaming_csv.py` → `invoice_pdf/io/csv_stream.py`. Provide shim import in `_legacy` to avoid mass rename diff. Add migration tests verifying resume works.
+> **Start Phase 6:** Convert CSV helpers into writer classes (`ClassificationCSVWriter`, `VendorCSVWriter`, `EmployeeCSVWriter`) placed in `invoice_pdf/io`. Each writer exposes `header: list[str]` and `.write(result)` API. Adjust Excel / summary builders to consume headers dynamically.
 
-## 9. Current Status (as of commit 4fc32f3)
+## 9. Current Status (as of Phase 5 completion)
 
-**✅ Completed Phases:** 0, 1, 2, 3, 4
-**🔄 Next Phase:** 5 (Persistence Layer Early)  
+**✅ Completed Phases:** 0, 1, 2, 3, 4, 5
+**🔄 Next Phase:** 6 (Output Writers)  
 **🏃‍♂️ Background Process:** PID 13908 - STILL RUNNING, unaffected by refactoring
-**📊 Test Status:** 67/67 tests passing across all modules
+**📊 Test Status:** 98/98 tests passing across all modules (16 manifest tests + 3 migration tests)
 **🗂️ Key Files Created:**
 - `invoice_pdf/config.py` - Typed configuration system
 - `invoice_pdf/logging_config.py` - Centralized logging
 - `invoice_pdf/core/models.py` - Pydantic v2 data models  
 - `invoice_pdf/core/rate_limit.py` - Async rate limiting & retry logic
 - `invoice_pdf/core/pdf_utils.py` - Pure PDF operations & semaphore management
-- `tests/test_*.py` - Comprehensive test coverage (67 tests)
+- `invoice_pdf/io/manifest.py` - SQLite manifest for resumable processing (moved from utilities)
+- `invoice_pdf/io/csv_stream.py` - Streaming CSV writer (moved from utilities)
+- `tests/test_*.py` - Comprehensive test coverage (98 tests)
 
 **⚠️ Important for Next Session:**
 - Legacy script is in `invoice_pdf/_legacy/main_2step_enhanced.py`
-- Uses new imports: `from core.rate_limit import CapacityLimiter, retry_with_backoff`
-- Uses new imports: `from core.pdf_utils import get_page_count, extract_first_n_pages, safe_get_page_count, safe_extract_first_n_pages, initialize_pdf_semaphore`
+- Uses new imports: `from invoice_pdf.io.manifest import ProcessingManifest`
+- Uses new imports: `from invoice_pdf.io.csv_stream import StreamingCSVWriter`
+- Uses core imports: `from core.rate_limit import CapacityLimiter, retry_with_backoff`
+- Uses core imports: `from core.pdf_utils import get_page_count, extract_first_n_pages, safe_get_page_count, safe_extract_first_n_pages, initialize_pdf_semaphore`
 - All semaphores converted to CapacityLimiter (anyio compatible, asyncio fallback)
 - PDF operations now centralized in `core.pdf_utils` module
+- Persistence layer now in `invoice_pdf/io/` package
 - Background process must remain unaffected - test after each change!
 
 ---

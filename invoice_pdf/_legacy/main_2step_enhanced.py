@@ -54,11 +54,11 @@ from prompts_2step_enhanced_v2 import (
     ENHANCED_VENDOR_INVOICE_EXTRACTION_PROMPT_V2
 )
 
-# Import streaming CSV writer for Phase 5 optimization
-from utilities.streaming_csv import StreamingCSVWriter
+# Import streaming CSV writer for Phase 5 optimization - updated for Phase 5
+from invoice_pdf.io.csv_stream import StreamingCSVWriter
 
-# Import SQLite manifest for resumable processing
-from utilities.manifest import ProcessingManifest
+# Import SQLite manifest for resumable processing - updated for Phase 5
+from invoice_pdf.io.manifest import ProcessingManifest
 
 # Import TUI for interactive monitoring
 from utilities.tui import run_tui_monitor

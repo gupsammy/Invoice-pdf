@@ -3,13 +3,13 @@ Unit tests for the ProcessingManifest SQLite implementation.
 """
 
 import os
+import sys
 import tempfile
 
 import pytest
 
-import sys
-sys.path.append('..')
-from utilities.manifest import ProcessingManifest, init_db
+sys.path.append("..")
+from invoice_pdf.io.manifest import ProcessingManifest, init_db
 
 
 class TestProcessingManifest:
@@ -281,7 +281,7 @@ class TestConvenienceFunctions:
 
     def test_convenience_functions_integration(self):
         """Test that convenience functions work with the manifest."""
-        from utilities.manifest import get_resume_queues, mark_classified, mark_extracted, summary
+        from invoice_pdf.io.manifest import get_resume_queues, mark_classified, mark_extracted, summary
 
         test_file = "/test/convenience.pdf"
 
@@ -300,6 +300,133 @@ class TestConvenienceFunctions:
         assert test_file not in classify_list  # already processed
         assert test_file not in extract_list   # already extracted
         assert "/new/file.pdf" in classify_list  # new file
+
+
+class TestPhase5Migration:
+    """Test cases specifically for Phase 5 migration - ensuring resume functionality still works."""
+
+    def setup_method(self):
+        """Set up test environment."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, "test_migration.db")
+        self.manifest = ProcessingManifest(self.db_path, batch_size=1)
+        self.manifest.connect()
+
+        # Simulate a batch of PDF files for processing
+        self.pdf_files = [
+            "/batch/invoice1.pdf",
+            "/batch/invoice2.pdf",
+            "/batch/report1.pdf",
+            "/batch/irrelevant1.pdf",
+            "/batch/invoice3.pdf"
+        ]
+
+    def teardown_method(self):
+        """Clean up test environment."""
+        self.manifest.close()
+        # Clean up temp files (including SQLite WAL files)
+        import glob
+        db_pattern = self.db_path + "*"
+        for db_file in glob.glob(db_pattern):
+            if os.path.exists(db_file):
+                try:
+                    os.remove(db_file)
+                except OSError:
+                    pass
+
+        # Clean up temp directory
+        try:
+            os.rmdir(self.temp_dir)
+        except OSError:
+            import shutil
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_resume_functionality_after_migration(self):
+        """Test that resume functionality works correctly after Phase 5 migration."""
+        # Simulate initial processing - some files get classified, some extracted
+        self.manifest.mark_classified(self.pdf_files[0], "vendor_invoice", "invoice")
+        self.manifest.mark_classified(self.pdf_files[1], "employee_t&e", "expense")
+        self.manifest.mark_classified(self.pdf_files[2], "irrelevant", "")
+        self.manifest.mark_classified(self.pdf_files[3], "vendor_invoice", "invoice")
+
+        # Mark some as extracted (simulating partial completion)
+        self.manifest.mark_extracted(self.pdf_files[0])
+        # pdf_files[1] classified but not extracted
+        # pdf_files[2] should be auto-extracted as irrelevant
+        self.manifest.mark_extracted(self.pdf_files[3])
+        # pdf_files[4] not processed at all
+
+        self.manifest.force_commit()
+
+        # Test resume queues functionality
+        classify_list, extract_list = self.manifest.get_resume_queues(self.pdf_files)
+
+        # Verify the resume logic works correctly
+        assert self.pdf_files[4] in classify_list, "New file should need classification"
+        assert self.pdf_files[1] in extract_list, "Classified employee T&E should need extraction"
+
+        # Already processed files should not appear in either queue
+        assert self.pdf_files[0] not in classify_list and self.pdf_files[0] not in extract_list
+        assert self.pdf_files[2] not in classify_list and self.pdf_files[2] not in extract_list  # irrelevant, auto-extracted
+        assert self.pdf_files[3] not in classify_list and self.pdf_files[3] not in extract_list
+
+        # Verify the correct count of files in each queue
+        assert len(classify_list) == 1, f"Expected 1 file in classify queue, got {len(classify_list)}"
+        assert len(extract_list) == 1, f"Expected 1 file in extract queue, got {len(extract_list)}"
+
+    def test_batch_processing_simulation(self):
+        """Test simulation of batch processing with resume after interruption."""
+        # Simulate processing first batch
+        batch_1 = self.pdf_files[:3]
+        for pdf in batch_1:
+            self.manifest.mark_classified(pdf, "vendor_invoice")
+            self.manifest.mark_extracted(pdf)
+
+        self.manifest.force_commit()
+
+        # Simulate interruption - second batch partially processed
+        batch_2 = self.pdf_files[3:]
+        self.manifest.mark_classified(batch_2[0], "employee_t&e")
+        # Simulate crash before extraction
+
+        # Test resume behavior
+        all_files = self.pdf_files
+        classify_list, extract_list = self.manifest.get_resume_queues(all_files)
+
+        # First batch should be complete (not in any queue)
+        for pdf in batch_1:
+            assert pdf not in classify_list and pdf not in extract_list
+
+        # Fourth file (batch_2[0]) should need extraction
+        assert batch_2[0] in extract_list and batch_2[0] not in classify_list
+
+        # Fifth file (batch_2[1]) should need classification
+        if len(batch_2) > 1:
+            assert batch_2[1] in classify_list and batch_2[1] not in extract_list
+
+    def test_error_handling_in_resume(self):
+        """Test that resume works correctly when files have errors."""
+        # Simulate some files with errors
+        self.manifest.mark_classified(self.pdf_files[0], "vendor_invoice")
+        self.manifest.mark_error(self.pdf_files[0], "Extraction failed")
+
+        self.manifest.mark_error(self.pdf_files[1], "Classification failed")
+
+        self.manifest.mark_classified(self.pdf_files[2], "employee_t&e")
+        # No error for this one
+
+        self.manifest.force_commit()
+
+        classify_list, extract_list = self.manifest.get_resume_queues(self.pdf_files)
+
+        # Files with classification errors should be re-classified
+        assert self.pdf_files[1] in classify_list
+
+        # Files with extraction errors should NOT appear in either queue (need manual intervention)
+        assert self.pdf_files[0] not in classify_list and self.pdf_files[0] not in extract_list
+
+        # Successfully classified files without errors should be in extract queue
+        assert self.pdf_files[2] in extract_list
 
 
 if __name__ == "__main__":
