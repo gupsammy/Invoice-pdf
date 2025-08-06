@@ -529,67 +529,40 @@ async def extract_document_data_async(
         try:
             # Cache JSON string once for both parsing attempts
             json_str = resp_txt[json_start:json_end]
-                        extraction_data = json.loads(json_str)
-                    except json.JSONDecodeError as json_error:
-                        # Try to fix common JSON malformations
-                        logging.warning(f"[EXTRACT] {pdf_path_obj.name} - JSON malformed, attempting repair: {str(json_error)}")
-                        try:
-                            import re
-                            # json_str already cached above
-                            # Fix common issue: "text" (extra text) -> "text"
-                            fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
-                            extraction_data = json.loads(fixed_json)
-                            logging.info(f"[EXTRACT] {pdf_path_obj.name} - JSON repair successful")
-                        except json.JSONDecodeError:
-                            logging.error(f"[EXTRACT] {pdf_path_obj.name} - JSON repair failed")
-                            save_extraction_response()  # Save on failure
-                            raise json_error
-                    
-                    # Add metadata
-                    extraction_data["file_name"] = pdf_path_obj.name
-                    extraction_data["file_path"] = str(pdf_path_obj)
-                    extraction_data["extraction_model"] = EXTRACTION_MODEL
-                    extraction_data["document_type_processed"] = document_type
-                    extraction_data["total_pages_in_pdf"] = total_pages
-                    
-                    logging.info(f"[EXTRACT] {pdf_path_obj.name} - Success ({document_type})")
-                    
-                    # Save response only if DEBUG_RESPONSES is enabled (success case)
-                    if SAVE_RESPONSES:
-                        save_extraction_response()
-                    
-                    # Record extraction completion in manifest (when resume mode is active)
-                    if processing_manifest:
-                        processing_manifest.mark_extracted(pdf_path)
-                    
-                    return extraction_data
-                    
-                except json.JSONDecodeError as jde:
-                    error_msg = f"JSON decode failed: {str(jde)}"
-                    logging.error(f"[EXTRACT] {pdf_path_obj.name} - {error_msg}")
-                    
-                    # Record error in manifest (when resume mode is active)
-                    if processing_manifest:
-                        processing_manifest.mark_error(pdf_path, error_msg)
-                    
-                    return None
-                except Exception as exc:
-                    if attempt < _MAX_RETRIES - 1:
-                        # Phase 8: Add jitter to retry back-off
-                        base_delay = min(10, 2 ** attempt)
-                        jitter = random.uniform(0, 3)
-                        delay = base_delay + jitter
-                        logging.warning(f"[EXTRACT] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay:.1f}s...")
-                        await asyncio.sleep(delay)
-                        continue
-                    error_msg = f"Exhausted retries: {str(exc)[:150]}"
-                    logging.error(f"[EXTRACT] {pdf_path_obj.name} - {error_msg}")
-                    
-                    # Record error in manifest (when resume mode is active)
-                    if processing_manifest:
-                        processing_manifest.mark_error(pdf_path, error_msg)
-                    
-                    return None
+            extraction_data = json.loads(json_str)
+        except json.JSONDecodeError as json_error:
+            # Try to fix common JSON malformations
+            logging.warning(f"[EXTRACT] {pdf_path_obj.name} - JSON malformed, attempting repair: {str(json_error)}")
+            try:
+                import re
+                # json_str already cached above
+                # Fix common issue: "text" (extra text) -> "text"
+                fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
+                extraction_data = json.loads(fixed_json)
+                logging.info(f"[EXTRACT] {pdf_path_obj.name} - JSON repair successful")
+            except json.JSONDecodeError:
+                logging.error(f"[EXTRACT] {pdf_path_obj.name} - JSON repair failed")
+                save_extraction_response()  # Save on failure
+                return None
+        
+        # Add metadata
+        extraction_data["file_name"] = pdf_path_obj.name
+        extraction_data["file_path"] = str(pdf_path_obj)
+        extraction_data["extraction_model"] = EXTRACTION_MODEL
+        extraction_data["document_type_processed"] = document_type
+        extraction_data["total_pages_in_pdf"] = total_pages
+        
+        logging.info(f"[EXTRACT] {pdf_path_obj.name} - Success ({document_type})")
+        
+        # Save response only if DEBUG_RESPONSES is enabled (success case)
+        if SAVE_RESPONSES:
+            save_extraction_response()
+        
+        # Record extraction completion in manifest (when resume mode is active)
+        if processing_manifest:
+            processing_manifest.mark_extracted(pdf_path)
+        
+        return extraction_data
                     
     except Exception as e:
         error_msg = f"Error: {str(e)[:150]}"

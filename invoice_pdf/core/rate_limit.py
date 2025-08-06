@@ -17,7 +17,7 @@ T = TypeVar("T")
 
 class CapacityLimiter:
     """Async capacity limiter compatible with anyio.CapacityLimiter interface.
-    
+
     Falls back to asyncio.Semaphore if anyio is not available.
     """
 
@@ -70,17 +70,17 @@ async def retry_with_backoff(
     logger: logging.Logger | None = None
 ) -> T | None:
     """Execute an async operation with exponential backoff retry logic.
-    
+
     Args:
         operation: Async function to execute
         max_retries: Maximum number of retry attempts (default: 3)
         base_delay: Base delay for exponential backoff (default: 2.0 seconds)
-        max_delay: Maximum delay between retries (default: 10.0 seconds) 
+        max_delay: Maximum delay between retries (default: 10.0 seconds)
         jitter_range: Random jitter range added to delay (default: 3.0 seconds)
         retry_exceptions: Tuple of exceptions that should trigger retry (default: (Exception,))
         operation_name: Name for logging purposes (optional)
         logger: Logger instance to use (optional, defaults to module logger)
-    
+
     Returns:
         Result of successful operation, or None if all retries exhausted
     """
@@ -188,7 +188,7 @@ class RateLimitedExecutor:
         jitter_range: float = 3.0
     ):
         """Initialize rate-limited executor.
-        
+
         Args:
             capacity: Maximum concurrent operations
             max_retries: Maximum retry attempts per operation
@@ -256,3 +256,4 @@ def create_pdf_executor(fd_limit: int = 50) -> RateLimitedExecutor:
         max_delay=5.0,
         jitter_range=1.0
     )
+
