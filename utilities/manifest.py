@@ -179,7 +179,7 @@ class ProcessingManifest:
                 # Get current progress for all files
                 placeholders = ','.join('?' * len(pdf_paths))
                 cursor = self._conn.execute(f"""
-                    SELECT file_path, classified, classification, extracted, doc_type 
+                    SELECT file_path, classified, classification, extracted, doc_type, last_error 
                     FROM progress 
                     WHERE file_path IN ({placeholders})
                 """, pdf_paths)
@@ -191,22 +191,33 @@ class ProcessingManifest:
                 
                 for pdf_path in pdf_paths:
                     if pdf_path in progress_map:
-                        classified, classification, extracted, doc_type = progress_map[pdf_path]
+                        classified, classification, extracted, doc_type, last_error = progress_map[pdf_path]
                         
                         # Skip if already fully processed
                         if extracted:
                             continue
+                        
+                        # Skip files with classification errors - they need to be re-classified
+                        if last_error and not classified:
+                            classify_list.append(pdf_path)
+                            continue
+                        
+                        # Skip files with extraction errors that were classified successfully
+                        if last_error and classified and not extracted:
+                            # Don't add to any queue - manual intervention may be needed
+                            # Could add a separate "error" queue in the future
+                            continue
                             
-                        # Need extraction if classified but not extracted
-                        if classified and not extracted:
+                        # Need extraction if classified but not extracted (and no errors)
+                        if classified and not extracted and not last_error:
                             # Only add to extraction queue if classification is valid
                             if classification in ['vendor_invoice', 'employee_t&e']:
                                 extract_list.append(pdf_path)
                             # If classification is 'irrelevant', mark as extracted (no extraction needed)
                             elif classification == 'irrelevant':
                                 self.mark_extracted(pdf_path)
-                        else:
-                            # Need classification
+                        elif not classified:
+                            # Need classification (and no errors)
                             classify_list.append(pdf_path)
                     else:
                         # New file, needs classification
