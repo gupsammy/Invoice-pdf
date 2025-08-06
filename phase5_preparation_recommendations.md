@@ -96,35 +96,66 @@ def extract_first_n_pages(pdf_path: Path | str, max_pages: int) -> bytes:
     # ... rest of implementation with proper resource management ...
 ```
 
-### 4. **CI/CD Pipeline**
+### 4. **CI/CD Pipeline** ✅ **COMPLETED**
 **Risk**: 🔴 Regressions slipping through without automated testing  
 **Impact**: Code quality and stability  
 **Required**: GitHub Actions with coverage gates
+**Status**: ✅ Enhanced with Python 3.11, coverage requirements (80%), and Codecov integration
 
-**Implementation** (2-3 hours):
+**Implementation** (2-3 hours): ✅ **COMPLETED**
 ```yaml
 # .github/workflows/ci.yml
+# IMPLEMENTED: Enhanced CI pipeline with coverage and Python 3.11
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main, "feature/refactor-phase-*" ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  test:
+  lint-and-type-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install poetry
-          poetry install --with dev
-      - name: Lint
-        run: poetry run ruff check .
-      - name: Type check
-        run: poetry run mypy invoice_pdf --strict
-      - name: Test with coverage
-        run: poetry run pytest --cov=invoice_pdf --cov-report=term --cov-fail-under=80
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    - name: Run ruff
+      run: ruff check .
+    - name: Run ruff format
+      run: ruff format --check .
+    - name: Run mypy
+      run: mypy invoice_pdf/ tests/
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint-and-type-check
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    - name: Run pytest with coverage
+      run: pytest --cov=invoice_pdf --cov-report=term --cov-report=xml --cov-fail-under=80
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: always()
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
 ```
 
 ---
