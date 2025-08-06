@@ -1281,23 +1281,91 @@ def read_csv_into_rows(file_path: str) -> List[List]:
 def create_excel_from_streamed_csvs(output_folder: str, input_folder_name: str):
     """Create an Excel workbook directly from the three streamed CSV files (chunked mode)."""
     import openpyxl
-    csv_mapping = {
-        "Classification": CLASSIFICATION_CSV_FILE,
-        "Employee_T&E": EMPLOYEE_EXTRACTION_CSV_FILE,
-        "Vendor_Invoices": VENDOR_EXTRACTION_CSV_FILE,
-    }
+    import csv
+    
     workbook = openpyxl.Workbook()
     # Remove default
     workbook.remove(workbook.active)
-    for sheet_name, csv_name in csv_mapping.items():
-        csv_path = os.path.join(output_folder, csv_name)
-        rows = read_csv_into_rows(csv_path)
-        if not rows:
-            continue
-        ws = workbook.create_sheet(sheet_name)
-        for r_idx, row in enumerate(rows, 1):
-            for c_idx, value in enumerate(row, 1):
-                ws.cell(row=r_idx, column=c_idx, value=value)
+    
+    # Create Not_Processed sheet (filtered classification data)
+    classification_csv_path = os.path.join(output_folder, CLASSIFICATION_CSV_FILE)
+    if os.path.exists(classification_csv_path):
+        ws = workbook.create_sheet("Not_Processed")
+        
+        # Headers for Not_Processed sheet
+        headers = ["File Name", "Classification", "Total Pages In PDF", "Classification Notes"]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = openpyxl.styles.Font(bold=True)
+            cell.fill = openpyxl.styles.PatternFill(start_color="FF6B6B", end_color="FF6B6B", fill_type="solid")
+        
+        # Filter and add only irrelevant and processing_failed rows
+        row_idx = 2
+        with open(classification_csv_path, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                classification = row.get('Classification', '')
+                if classification in ['irrelevant', 'processing_failed']:
+                    filtered_row = [
+                        row.get('File Name', ''),
+                        row.get('Classification', ''),
+                        row.get('Total Pages In PDF', ''),
+                        row.get('Classification Notes', '')
+                    ]
+                    for col, value in enumerate(filtered_row, 1):
+                        ws.cell(row=row_idx, column=col, value=value)
+                    row_idx += 1
+    
+    # Create Employee_T&E sheet (remove File Path column)
+    employee_csv_path = os.path.join(output_folder, EMPLOYEE_EXTRACTION_CSV_FILE)
+    if os.path.exists(employee_csv_path):
+        ws = workbook.create_sheet("Employee_T&E")
+        
+        with open(employee_csv_path, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            headers = [h for h in reader.fieldnames if h != 'file_path']  # Remove file_path
+            
+            # Add headers
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = openpyxl.styles.Font(bold=True)
+                cell.fill = openpyxl.styles.PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+            
+            # Add data rows (excluding file_path column)
+            row_idx = 2
+            f.seek(0)  # Reset file pointer
+            reader = csv.DictReader(f)
+            for row in reader:
+                filtered_row = [row.get(h, '') for h in headers]
+                for col, value in enumerate(filtered_row, 1):
+                    ws.cell(row=row_idx, column=col, value=value)
+                row_idx += 1
+    
+    # Create Vendor_Invoices sheet (remove File Path column)
+    vendor_csv_path = os.path.join(output_folder, VENDOR_EXTRACTION_CSV_FILE)
+    if os.path.exists(vendor_csv_path):
+        ws = workbook.create_sheet("Vendor_Invoices")
+        
+        with open(vendor_csv_path, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            headers = [h for h in reader.fieldnames if h != 'file_path']  # Remove file_path
+            
+            # Add headers
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = openpyxl.styles.Font(bold=True)
+                cell.fill = openpyxl.styles.PatternFill(start_color="D97230", end_color="D97230", fill_type="solid")
+            
+            # Add data rows (excluding file_path column)
+            row_idx = 2
+            f.seek(0)  # Reset file pointer
+            reader = csv.DictReader(f)
+            for row in reader:
+                filtered_row = [row.get(h, '') for h in headers]
+                for col, value in enumerate(filtered_row, 1):
+                    ws.cell(row=row_idx, column=col, value=value)
+                row_idx += 1
+    
     if not workbook.worksheets:
         return  # Nothing to save
     excel_filename = f"{input_folder_name}_data.xlsx"
@@ -1378,7 +1446,7 @@ def create_excel_report(
         # Remove default sheet
         workbook.remove(workbook.active)
         
-        # Create Classification worksheet - only include irrelevant/problem files
+        # Create Not_Processed worksheet - only include irrelevant/problem files
         problem_classifications = [result for result in classification_results 
                                  if result.get("classification") in ["irrelevant", "processing_failed"]]
         
@@ -1393,7 +1461,7 @@ def create_excel_report(
                 ]
                 for result in problem_classifications
             ]
-            create_worksheet(workbook, "Classification", headers, data_rows, "366092")
+            create_worksheet(workbook, "Not_Processed", headers, data_rows, "FF6B6B")
         
         # Create Employee T&E worksheet
         if employee_results:
@@ -2353,17 +2421,46 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     else:
         # Pipeline overlap mode - extraction_results already available
         # Show processing statistics based on classification results
-        skipped_irrelevant = len([r for r in classification_results if r.get("classification") == "irrelevant"])
-        skipped_processing_failed = len([r for r in classification_results if r.get("classification") == "processing_failed"]) 
-        oversized_count = len([r for r in classification_results if r.get("total_pages_in_pdf", 0) > MAX_EXTRACTION_PAGES and r.get("classification") in ["employee_t&e", "vendor_invoice"]])
-        relevant_count = len([r for r in classification_results if r.get("classification") in ["employee_t&e", "vendor_invoice"]])
-        
-        # Create relevant_documents list from classification results for reporting
-        relevant_documents = [
-            (r["file_path"], r.get("classification"))
-            for r in classification_results 
-            if r.get("classification") in ["employee_t&e", "vendor_invoice"]
-        ]
+        if classification_results:
+            # Non-chunked mode: calculate from in-memory classification results
+            skipped_irrelevant = len([r for r in classification_results if r.get("classification") == "irrelevant"])
+            skipped_processing_failed = len([r for r in classification_results if r.get("classification") == "processing_failed"]) 
+            oversized_count = len([r for r in classification_results if r.get("total_pages_in_pdf", 0) > MAX_EXTRACTION_PAGES and r.get("classification") in ["employee_t&e", "vendor_invoice"]])
+            relevant_count = len([r for r in classification_results if r.get("classification") in ["employee_t&e", "vendor_invoice"]])
+            
+            # Create relevant_documents list from classification results for reporting
+            relevant_documents = [
+                (r["file_path"], r.get("classification"))
+                for r in classification_results 
+                if r.get("classification") in ["employee_t&e", "vendor_invoice"]
+            ]
+        else:
+            # Chunked mode: calculate from streaming CSV file since classification_results is empty to save memory
+            import csv
+            classification_csv_path = os.path.join(output_folder, CLASSIFICATION_CSV_FILE)
+            skipped_irrelevant = 0
+            skipped_processing_failed = 0
+            oversized_count = 0
+            relevant_count = 0
+            relevant_documents = []
+            
+            if os.path.exists(classification_csv_path):
+                with open(classification_csv_path, 'r', newline='', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        classification = row.get('Classification', '')
+                        total_pages = int(row.get('Total Pages In PDF', 0)) if row.get('Total Pages In PDF', '').isdigit() else 0
+                        file_path = row.get('File Path', '')
+                        
+                        if classification == "irrelevant":
+                            skipped_irrelevant += 1
+                        elif classification == "processing_failed":
+                            skipped_processing_failed += 1
+                        elif classification in ["employee_t&e", "vendor_invoice"]:
+                            relevant_count += 1
+                            relevant_documents.append((file_path, classification))
+                            if total_pages > MAX_EXTRACTION_PAGES:
+                                oversized_count += 1
         
         # Adjust logging based on processing mode (chunked vs. non-chunked)
         if classification_results:
