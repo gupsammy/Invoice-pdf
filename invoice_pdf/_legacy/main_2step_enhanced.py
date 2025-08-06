@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from config import Settings
 from logging_config import setup_logging
 from core.models import ClassificationResult, classification_result_to_dict
+from core.rate_limit import CapacityLimiter, retry_with_backoff
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
@@ -220,7 +221,7 @@ def create_preprocessing_failure_result(pdf_path: str, error_message: str) -> Cl
 async def classify_document_async(
     pdf_path: str,
     client: "genai.Client",
-    semaphore: asyncio.Semaphore,
+    capacity_limiter: CapacityLimiter,
     json_responses_folder: str
 ) -> Optional[Dict[str, Any]]:
     """
@@ -229,7 +230,7 @@ async def classify_document_async(
     Args:
         pdf_path: Path to the PDF file
         client: Shared genai client
-        semaphore: Semaphore to control concurrent API calls
+        capacity_limiter: CapacityLimiter to control concurrent API calls
         json_responses_folder: Folder to save JSON responses
         
     Returns:
@@ -287,126 +288,112 @@ async def classify_document_async(
         
         config = types.GenerateContentConfig(system_instruction=ENHANCED_CLASSIFICATION_PROMPT_V2)
         
-        async with semaphore:
-            for attempt in range(_MAX_RETRIES):
-                try:
-                    logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Attempt {attempt + 1}/{_MAX_RETRIES} (Total pages: {total_pages})")
-                    
-                    response = await client.aio.models.generate_content(
-                        model=CLASSIFICATION_MODEL,
-                        contents=contents,
-                        config=config
-                    )
-                    
-                    # Save response for debugging (controlled by DEBUG_RESPONSES flag)
-                    success = False  # Will be set based on parsing success
-                    classification_log_filename = f"{pdf_path_obj.stem}_classification_attempt_{attempt+1}.txt"
-                    classification_log_path = os.path.join(json_responses_folder, "classification", classification_log_filename)
-                    
-                    # Save response only when DEBUG_RESPONSES=1 or on failure
-                    def save_classification_response():
-                        os.makedirs(os.path.dirname(classification_log_path), exist_ok=True)
-                        with open(classification_log_path, 'w', encoding='utf-8') as f:
-                            f.write(response.text)
-                    
-                    # Parse JSON response with robust error handling
-                    resp_txt = response.text
-                    json_start = resp_txt.find('{')
-                    json_end = resp_txt.rfind('}') + 1
-                    
-                    if json_start == -1 or json_end == 0:
-                        if any(err in resp_txt for err in ["502", "Service Unavailable", "server error"]):
-                            raise RuntimeError("Transient upstream error – will retry")
-                        logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Unparsable response: {resp_txt[:120]}")
-                        save_classification_response()  # Save on failure
-                        return None
-                    
-                    try:
-                        # Phase 8: Cache JSON string once for both parsing attempts
-                        json_str = resp_txt[json_start:json_end]
-                        classification_data = json.loads(json_str)
-                    except json.JSONDecodeError as json_error:
-                        # Try to fix common JSON malformations
-                        logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - JSON malformed, attempting repair: {str(json_error)}")
-                        try:
-                            import re
-                            # json_str already cached above
-                            # Fix common issue: "text" (extra text) -> "text"
-                            fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
-                            classification_data = json.loads(fixed_json)
-                            logging.info(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair successful")
-                        except json.JSONDecodeError:
-                            logging.error(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair failed")
-                            save_classification_response()  # Save on failure
-                            raise json_error
-                    
-                    # Create ClassificationResult from parsed JSON
-                    classification_result = ClassificationResult(
-                        file_name=pdf_path_obj.name,
-                        file_path=str(pdf_path_obj),
-                        classification=classification_data.get('classification', 'unknown'),
-                        confidence=classification_data.get('confidence', 0.0),
-                        reasoning=classification_data.get('reasoning', ''),
-                        key_indicators=classification_data.get('key_indicators', []),
-                        classification_model=CLASSIFICATION_MODEL,
-                        total_pages_in_pdf=total_pages,
-                        pages_analyzed=min(total_pages, MAX_CLASSIFICATION_PAGES),
-                        classification_notes=classification_data.get('classification_notes', ''),
-                        # Flatten document_characteristics or use individual fields
-                        has_employee_codes=classification_data.get('document_characteristics', {}).get('has_employee_codes', classification_data.get('has_employee_codes', False)),
-                        has_vendor_letterhead=classification_data.get('document_characteristics', {}).get('has_vendor_letterhead', classification_data.get('has_vendor_letterhead', False)),
-                        has_invoice_numbers=classification_data.get('document_characteristics', {}).get('has_invoice_numbers', classification_data.get('has_invoice_numbers', False)),
-                        has_travel_dates=classification_data.get('document_characteristics', {}).get('has_travel_dates', classification_data.get('has_travel_dates', False)),
-                        appears_financial=classification_data.get('document_characteristics', {}).get('appears_financial', classification_data.get('appears_financial', False)),
-                        has_amount_calculations=classification_data.get('document_characteristics', {}).get('has_amount_calculations', classification_data.get('has_amount_calculations', False)),
-                        has_tax_information=classification_data.get('document_characteristics', {}).get('has_tax_information', classification_data.get('has_tax_information', False)),
-                        contains_multiple_doc_types=classification_data.get('document_characteristics', {}).get('contains_multiple_doc_types', classification_data.get('contains_multiple_doc_types', False)),
-                        primary_document_type=classification_data.get('document_characteristics', {}).get('primary_document_type', classification_data.get('primary_document_type', 'unknown'))
-                    )
-                    
-                    classification = classification_result.classification
-                    confidence = classification_result.confidence
-                    logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Success: {classification} (confidence: {confidence:.2f})")
-                    
-                    # Save response only if DEBUG_RESPONSES is enabled (success case)
-                    if SAVE_RESPONSES:
-                        save_classification_response()
-                    
-                    # Record classification in manifest (when resume mode is active)
-                    if processing_manifest:
-                        doc_type = classification_data.get('document_type', '')
-                        processing_manifest.mark_classified(pdf_path, str(classification), doc_type)
-                    
-                    # Convert back to dict for legacy compatibility
-                    return classification_result_to_dict(classification_result)
-                    
-                except json.JSONDecodeError as jde:
-                    error_msg = f"JSON decode failed: {str(jde)}"
-                    logging.error(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
-                    
-                    # Record error in manifest (when resume mode is active)
-                    if processing_manifest:
-                        processing_manifest.mark_error(pdf_path, error_msg)
-                    
-                    return None
-                except Exception as exc:
-                    if attempt < _MAX_RETRIES - 1:
-                        # Phase 8: Add jitter to retry back-off
-                        base_delay = min(10, 2 ** attempt)
-                        jitter = random.uniform(0, 3)
-                        delay = base_delay + jitter
-                        logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - Error: {str(exc)[:100]}. Retrying in {delay:.1f}s...")
-                        await asyncio.sleep(delay)
-                        continue
-                    error_msg = f"Exhausted retries: {str(exc)[:150]}"
-                    logging.error(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
-                    
-                    # Record error in manifest (when resume mode is active)
-                    if processing_manifest:
-                        processing_manifest.mark_error(pdf_path, error_msg)
-                    
-                    return None
-                    
+        # Use the new rate-limited retry logic
+        async def classify_operation():
+            async with capacity_limiter:
+                logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Making API call (Total pages: {total_pages})")
+                
+                response = await client.aio.models.generate_content(
+                    model=CLASSIFICATION_MODEL,
+                    contents=contents,
+                    config=config
+                )
+                return response
+        
+        response = await retry_with_backoff(
+            operation=classify_operation,
+            max_retries=_MAX_RETRIES,
+            base_delay=2.0,
+            max_delay=10.0,
+            jitter_range=3.0,
+            operation_name=f"CLASSIFY {pdf_path_obj.name}"
+        )
+        
+        if response is None:
+            return None
+        
+        # Save response for debugging (controlled by DEBUG_RESPONSES flag)
+        success = False  # Will be set based on parsing success
+        classification_log_filename = f"{pdf_path_obj.stem}_classification.txt"
+        classification_log_path = os.path.join(json_responses_folder, "classification", classification_log_filename)
+        
+        # Save response only when DEBUG_RESPONSES=1 or on failure
+        def save_classification_response():
+            os.makedirs(os.path.dirname(classification_log_path), exist_ok=True)
+            with open(classification_log_path, 'w', encoding='utf-8') as f:
+                f.write(response.text)
+        
+        # Parse JSON response with robust error handling
+        resp_txt = response.text
+        json_start = resp_txt.find('{')
+        json_end = resp_txt.rfind('}') + 1
+        
+        if json_start == -1 or json_end == 0:
+            if any(err in resp_txt for err in ["502", "Service Unavailable", "server error"]):
+                raise RuntimeError("Transient upstream error – will retry")
+            logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Unparsable response: {resp_txt[:120]}")
+            save_classification_response()  # Save on failure
+            return None
+        
+        try:
+            # Cache JSON string once for both parsing attempts
+            json_str = resp_txt[json_start:json_end]
+            classification_data = json.loads(json_str)
+        except json.JSONDecodeError as json_error:
+            # Try to fix common JSON malformations
+            logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - JSON malformed, attempting repair: {str(json_error)}")
+            try:
+                import re
+                # json_str already cached above
+                # Fix common issue: "text" (extra text) -> "text"
+                fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
+                classification_data = json.loads(fixed_json)
+                logging.info(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair successful")
+            except json.JSONDecodeError:
+                logging.error(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair failed")
+                save_classification_response()  # Save on failure
+            return None
+        
+        # Create ClassificationResult from parsed JSON
+        classification_result = ClassificationResult(
+            file_name=pdf_path_obj.name,
+            file_path=str(pdf_path_obj),
+            classification=classification_data.get('classification', 'unknown'),
+            confidence=classification_data.get('confidence', 0.0),
+            reasoning=classification_data.get('reasoning', ''),
+            key_indicators=classification_data.get('key_indicators', []),
+            classification_model=CLASSIFICATION_MODEL,
+            total_pages_in_pdf=total_pages,
+            pages_analyzed=min(total_pages, MAX_CLASSIFICATION_PAGES),
+            classification_notes=classification_data.get('classification_notes', ''),
+            # Flatten document_characteristics or use individual fields
+            has_employee_codes=classification_data.get('document_characteristics', {}).get('has_employee_codes', classification_data.get('has_employee_codes', False)),
+            has_vendor_letterhead=classification_data.get('document_characteristics', {}).get('has_vendor_letterhead', classification_data.get('has_vendor_letterhead', False)),
+            has_invoice_numbers=classification_data.get('document_characteristics', {}).get('has_invoice_numbers', classification_data.get('has_invoice_numbers', False)),
+            has_travel_dates=classification_data.get('document_characteristics', {}).get('has_travel_dates', classification_data.get('has_travel_dates', False)),
+            appears_financial=classification_data.get('document_characteristics', {}).get('appears_financial', classification_data.get('appears_financial', False)),
+            has_amount_calculations=classification_data.get('document_characteristics', {}).get('has_amount_calculations', classification_data.get('has_amount_calculations', False)),
+            has_tax_information=classification_data.get('document_characteristics', {}).get('has_tax_information', classification_data.get('has_tax_information', False)),
+            contains_multiple_doc_types=classification_data.get('document_characteristics', {}).get('contains_multiple_doc_types', classification_data.get('contains_multiple_doc_types', False)),
+            primary_document_type=classification_data.get('document_characteristics', {}).get('primary_document_type', classification_data.get('primary_document_type', 'unknown'))
+        )
+        
+        classification = classification_result.classification
+        confidence = classification_result.confidence
+        logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Success: {classification} (confidence: {confidence:.2f})")
+        
+        # Save response only if DEBUG_RESPONSES is enabled (success case)
+        if SAVE_RESPONSES:
+            save_classification_response()
+        
+        # Record classification in manifest (when resume mode is active)
+        if processing_manifest:
+            doc_type = classification_data.get('document_type', '')
+            processing_manifest.mark_classified(pdf_path, str(classification), doc_type)
+        
+        # Convert back to dict for legacy compatibility
+        return classification_result_to_dict(classification_result)
+        
     except Exception as e:
         error_msg = f"Preprocessing error: {str(e)[:150]}"
         logging.error(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
@@ -421,7 +408,7 @@ async def extract_document_data_async(
     pdf_path: str,
     document_type: str,
     client: "genai.Client",
-    semaphore: asyncio.Semaphore,
+    capacity_limiter: CapacityLimiter,
     json_responses_folder: str
 ) -> Optional[Dict[str, Any]]:
     """
@@ -431,7 +418,7 @@ async def extract_document_data_async(
         pdf_path: Path to the PDF file
         document_type: Classification result (employee_t&e or vendor_invoice)
         client: Shared genai client
-        semaphore: Semaphore to control concurrent API calls
+        capacity_limiter: CapacityLimiter to control concurrent API calls
         json_responses_folder: Folder to save JSON responses
         
     Returns:
@@ -491,44 +478,57 @@ async def extract_document_data_async(
         
         config = types.GenerateContentConfig(system_instruction=extraction_prompt)
         
-        async with semaphore:
-            for attempt in range(_MAX_RETRIES):
-                try:
-                    logging.info(f"[EXTRACT] {pdf_path_obj.name} - Attempt {attempt + 1}/{_MAX_RETRIES} ({document_type}, {total_pages} pages)")
-                    
-                    response = await client.aio.models.generate_content(
-                        model=EXTRACTION_MODEL,
-                        contents=contents,
-                        config=config
-                    )
-                    
-                    # Save response for debugging in appropriate subfolder
-                    # Save response for debugging (controlled by DEBUG_RESPONSES flag)
-                    extraction_log_filename = f"{pdf_path_obj.stem}_extraction_{document_type}_attempt_{attempt+1}.txt"
-                    extraction_subfolder = os.path.join(json_responses_folder, document_type)
-                    extraction_log_path = os.path.join(extraction_subfolder, extraction_log_filename)
-                    
-                    # Save response only when DEBUG_RESPONSES=1 or on failure
-                    def save_extraction_response():
-                        os.makedirs(extraction_subfolder, exist_ok=True)
-                        with open(extraction_log_path, 'w', encoding='utf-8') as f:
-                            f.write(response.text)
-                    
-                    # Parse JSON response with robust error handling
-                    resp_txt = response.text
-                    json_start = resp_txt.find('{')
-                    json_end = resp_txt.rfind('}') + 1
-                    
-                    if json_start == -1 or json_end == 0:
-                        if any(err in resp_txt for err in ["502", "Service Unavailable", "server error"]):
-                            raise RuntimeError("Transient upstream error – will retry")
-                        logging.error(f"[EXTRACT] {pdf_path_obj.name} - Unparsable response: {resp_txt[:120]}")
-                        save_extraction_response()  # Save on failure
-                        return None
-                    
-                    try:
-                        # Phase 8: Cache JSON string once for both parsing attempts
-                        json_str = resp_txt[json_start:json_end]
+        # Use the new rate-limited retry logic
+        async def extract_operation():
+            async with capacity_limiter:
+                logging.info(f"[EXTRACT] {pdf_path_obj.name} - Making API call ({document_type}, {total_pages} pages)")
+                
+                response = await client.aio.models.generate_content(
+                    model=EXTRACTION_MODEL,
+                    contents=contents,
+                    config=config
+                )
+                return response
+        
+        response = await retry_with_backoff(
+            operation=extract_operation,
+            max_retries=_MAX_RETRIES,
+            base_delay=2.0,
+            max_delay=10.0,
+            jitter_range=3.0,
+            operation_name=f"EXTRACT {pdf_path_obj.name} ({document_type})"
+        )
+        
+        if response is None:
+            return None
+        
+        # Save response for debugging in appropriate subfolder
+        # Save response for debugging (controlled by DEBUG_RESPONSES flag)
+        extraction_log_filename = f"{pdf_path_obj.stem}_extraction_{document_type}.txt"
+        extraction_subfolder = os.path.join(json_responses_folder, document_type)
+        extraction_log_path = os.path.join(extraction_subfolder, extraction_log_filename)
+        
+        # Save response only when DEBUG_RESPONSES=1 or on failure
+        def save_extraction_response():
+            os.makedirs(extraction_subfolder, exist_ok=True)
+            with open(extraction_log_path, 'w', encoding='utf-8') as f:
+                f.write(response.text)
+        
+        # Parse JSON response with robust error handling
+        resp_txt = response.text
+        json_start = resp_txt.find('{')
+        json_end = resp_txt.rfind('}') + 1
+        
+        if json_start == -1 or json_end == 0:
+            if any(err in resp_txt for err in ["502", "Service Unavailable", "server error"]):
+                raise RuntimeError("Transient upstream error – will retry")
+            logging.error(f"[EXTRACT] {pdf_path_obj.name} - Unparsable response: {resp_txt[:120]}")
+            save_extraction_response()  # Save on failure
+            return None
+        
+        try:
+            # Cache JSON string once for both parsing attempts
+            json_str = resp_txt[json_start:json_end]
                         extraction_data = json.loads(json_str)
                     except json.JSONDecodeError as json_error:
                         # Try to fix common JSON malformations
@@ -1921,7 +1921,7 @@ async def setup_processing_environment(
     logs_folder: str, 
     base_json_responses_folder: str,
     resume_extraction: bool = False
-) -> Tuple[str, str, List[str], "genai.Client", asyncio.Semaphore, asyncio.Semaphore]:
+) -> Tuple[str, str, List[str], "genai.Client", CapacityLimiter]:
     """
     Set up the processing environment including folders, logging, file discovery, and client.
     
@@ -2003,9 +2003,9 @@ async def setup_processing_environment(
         logging.info("🔐 Using regular Gemini API with API key + aiohttp transport")
     
     # Create single quota semaphore for API rate limiting (Phase 1 optimization)
-    quota_semaphore = asyncio.Semaphore(QUOTA_LIMIT)
+    quota_limiter = CapacityLimiter(QUOTA_LIMIT)
     
-    return output_folder, json_responses_folder, pdf_files, client, quota_semaphore
+    return output_folder, json_responses_folder, pdf_files, client, quota_limiter
 
 def get_missing_extraction_files(output_folder: str, json_responses_folder: str) -> Tuple[List[Tuple[str, str]], int, int]:
     """
@@ -2234,13 +2234,13 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     base_json_responses_folder = json_responses_folder or JSON_RESPONSES_FOLDER
     
     # Set up processing environment
-    output_folder, json_responses_folder, pdf_files, client, quota_semaphore = await setup_processing_environment(
+    output_folder, json_responses_folder, pdf_files, client, quota_limiter = await setup_processing_environment(
         input_folder, base_output_folder, logs_folder, base_json_responses_folder, resume_extraction
     )
     
     # Initialize PDF file descriptor semaphore (Phase 4 optimization)
     global pdf_fd_semaphore
-    pdf_fd_semaphore = asyncio.Semaphore(PDF_FD_SEMAPHORE_LIMIT)
+    pdf_fd_semaphore = CapacityLimiter(PDF_FD_SEMAPHORE_LIMIT)
     logging.info(f"🔒 PDF file descriptor semaphore initialized (limit: {PDF_FD_SEMAPHORE_LIMIT})")
     
     # Initialize processing manifest for resumable operations
