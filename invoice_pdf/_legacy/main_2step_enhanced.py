@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from config import Settings
 from logging_config import setup_logging
+from core.models import ClassificationResult, classification_result_to_dict
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
@@ -188,36 +189,33 @@ def extract_first_n_pages_pdf(pdf_path: str, max_pages: int = MAX_CLASSIFICATION
         logging.error(f"Error extracting first {max_pages} pages from {pdf_path}: {str(e)}")
         raise
 
-def create_preprocessing_failure_result(pdf_path: str, error_message: str) -> Dict[str, Any]:
+def create_preprocessing_failure_result(pdf_path: str, error_message: str) -> ClassificationResult:
     """
     Create a classification result for preprocessing failures.
     Mark as processing_failed without sending to API.
     """
     pdf_path_obj = Path(pdf_path)
-    return {
-        "file_name": pdf_path_obj.name,
-        "file_path": pdf_path,
-        "classification": "processing_failed",
-        "confidence": 1.0,
-        "reasoning": f"Preprocessing failed: {error_message}",
-        "key_indicators": "PDF preprocessing error",
-        "has_employee_codes": False,
-        "has_vendor_letterhead": False,
-        "has_invoice_numbers": False,
-        "has_travel_dates": False,
-        "appears_financial": False,
-        "has_amount_calculations": False,
-        "has_tax_information": False,
-        "contains_multiple_doc_types": False,
-        "primary_document_type": "preprocessing_error",
-        "classification_model": "preprocessing-error-handler",
-        "total_pages_in_pdf": 0,
-        "pages_analyzed": 0,
-        "classification_notes": f"File failed PDF preprocessing: {error_message}",
-        "preprocessing_failure": True,
-        "failure_stage": "preprocessing",
-        "error_message": error_message
-    }
+    return ClassificationResult(
+        file_name=pdf_path_obj.name,
+        file_path=pdf_path,
+        classification="processing_failed",
+        confidence=1.0,
+        reasoning=f"Preprocessing failed: {error_message}",
+        key_indicators=["PDF preprocessing error"],
+        has_employee_codes=False,
+        has_vendor_letterhead=False,
+        has_invoice_numbers=False,
+        has_travel_dates=False,
+        appears_financial=False,
+        has_amount_calculations=False,
+        has_tax_information=False,
+        contains_multiple_doc_types=False,
+        primary_document_type="preprocessing_error",
+        classification_model="preprocessing-error-handler",
+        total_pages_in_pdf=0,
+        pages_analyzed=0,
+        classification_notes=f"File failed PDF preprocessing: {error_message}"
+    )
 
 async def classify_document_async(
     pdf_path: str,
@@ -264,7 +262,8 @@ async def classify_document_async(
             if total_pages == 0:
                 error_msg = "Unable to read PDF or empty PDF"
                 logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
-                return create_preprocessing_failure_result(pdf_path, error_msg)
+                result = create_preprocessing_failure_result(pdf_path, error_msg)
+                return classification_result_to_dict(result)
         except Exception as e:
             error_msg = f"Failed to get PDF page count: {str(e)}"
             logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
@@ -341,15 +340,32 @@ async def classify_document_async(
                             save_classification_response()  # Save on failure
                             raise json_error
                     
-                    # Add metadata
-                    classification_data["file_name"] = pdf_path_obj.name
-                    classification_data["file_path"] = str(pdf_path_obj)
-                    classification_data["classification_model"] = CLASSIFICATION_MODEL
-                    classification_data["total_pages_in_pdf"] = total_pages
-                    classification_data["pages_analyzed"] = min(total_pages, MAX_CLASSIFICATION_PAGES)
+                    # Create ClassificationResult from parsed JSON
+                    classification_result = ClassificationResult(
+                        file_name=pdf_path_obj.name,
+                        file_path=str(pdf_path_obj),
+                        classification=classification_data.get('classification', 'unknown'),
+                        confidence=classification_data.get('confidence', 0.0),
+                        reasoning=classification_data.get('reasoning', ''),
+                        key_indicators=classification_data.get('key_indicators', []),
+                        classification_model=CLASSIFICATION_MODEL,
+                        total_pages_in_pdf=total_pages,
+                        pages_analyzed=min(total_pages, MAX_CLASSIFICATION_PAGES),
+                        classification_notes=classification_data.get('classification_notes', ''),
+                        # Flatten document_characteristics or use individual fields
+                        has_employee_codes=classification_data.get('document_characteristics', {}).get('has_employee_codes', classification_data.get('has_employee_codes', False)),
+                        has_vendor_letterhead=classification_data.get('document_characteristics', {}).get('has_vendor_letterhead', classification_data.get('has_vendor_letterhead', False)),
+                        has_invoice_numbers=classification_data.get('document_characteristics', {}).get('has_invoice_numbers', classification_data.get('has_invoice_numbers', False)),
+                        has_travel_dates=classification_data.get('document_characteristics', {}).get('has_travel_dates', classification_data.get('has_travel_dates', False)),
+                        appears_financial=classification_data.get('document_characteristics', {}).get('appears_financial', classification_data.get('appears_financial', False)),
+                        has_amount_calculations=classification_data.get('document_characteristics', {}).get('has_amount_calculations', classification_data.get('has_amount_calculations', False)),
+                        has_tax_information=classification_data.get('document_characteristics', {}).get('has_tax_information', classification_data.get('has_tax_information', False)),
+                        contains_multiple_doc_types=classification_data.get('document_characteristics', {}).get('contains_multiple_doc_types', classification_data.get('contains_multiple_doc_types', False)),
+                        primary_document_type=classification_data.get('document_characteristics', {}).get('primary_document_type', classification_data.get('primary_document_type', 'unknown'))
+                    )
                     
-                    classification = classification_data.get('classification', 'unknown')
-                    confidence = classification_data.get('confidence', 0)
+                    classification = classification_result.classification
+                    confidence = classification_result.confidence
                     logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Success: {classification} (confidence: {confidence:.2f})")
                     
                     # Save response only if DEBUG_RESPONSES is enabled (success case)
@@ -358,11 +374,11 @@ async def classify_document_async(
                     
                     # Record classification in manifest (when resume mode is active)
                     if processing_manifest:
-                        classification = classification_data.get('classification', '')
                         doc_type = classification_data.get('document_type', '')
-                        processing_manifest.mark_classified(pdf_path, classification, doc_type)
+                        processing_manifest.mark_classified(pdf_path, str(classification), doc_type)
                     
-                    return classification_data
+                    # Convert back to dict for legacy compatibility
+                    return classification_result_to_dict(classification_result)
                     
                 except json.JSONDecodeError as jde:
                     error_msg = f"JSON decode failed: {str(jde)}"

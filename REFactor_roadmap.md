@@ -75,12 +75,14 @@ invoice_pdf/               # new top-level package
 
 **Status**: ✅ Complete - Legacy script now uses typed configuration. Tests passing.
 
-### Phase 2 – Canonical Data-Models
+### Phase 2 – Canonical Data-Models ✅ **COMPLETED**
 
-- Add `invoice_pdf/core/models.py` (pydantic v2).
-- Wrap existing payloads (`classification_data`, `extraction_data`, preprocessing failure) in models.
-- Update `_legacy` classify / extract functions to return models.
-- Add `tests/test_models.py` to assert JSON round-trip and backwards compatibility.
+- ✅ Add `invoice_pdf/core/models.py` (pydantic v2).
+- ✅ Wrap existing payloads (`classification_data`, `extraction_data`, preprocessing failure) in models.
+- ✅ Update `_legacy` classify / extract functions to return models.
+- ✅ Add `tests/test_models.py` to assert JSON round-trip and backwards compatibility.
+
+**Status**: ✅ Complete - Classification functions now use typed models internally with legacy dict compatibility.
 
 ### Phase 3 – Shared Concurrency & Rate-Limiting
 

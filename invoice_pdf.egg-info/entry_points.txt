@@ -1,0 +1,2 @@
+[console_scripts]
+invoice-pdf = invoice_pdf.__main__:main
