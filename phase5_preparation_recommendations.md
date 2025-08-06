@@ -162,11 +162,12 @@ jobs:
 
 ## ⚠️ HIGH PRIORITY (Should fix before Phase 5)
 
-### 5. **Resource Management**
+### 5. **Resource Management** ✅ **COMPLETED**
 **Risk**: 🟡 Memory leaks from unclosed PDF documents  
 **Files**: `invoice_pdf/core/pdf_utils.py`
+**Status**: ✅ Implemented PDF context manager and updated all PDF operations to use it
 
-**Implementation** (1-2 hours):
+**Implementation** (1-2 hours): ✅ **COMPLETED**
 ```python
 from contextlib import contextmanager
 
@@ -185,11 +186,12 @@ async def get_page_count(pdf_path: Path) -> int:
         return doc.page_count
 ```
 
-### 6. **Configuration Tunables**
+### 6. **Configuration Tunables** ✅ **COMPLETED**
 **Risk**: 🟡 Hard-coded limits prevent production tuning  
 **Files**: `invoice_pdf/config.py`
+**Status**: ✅ Enhanced configuration with additional retry tunables
 
-**Implementation** (2-3 hours):
+**Implementation** (2-3 hours): ✅ **COMPLETED**
 ```python
 class Settings(BaseSettings):
     # Rate limiting
@@ -203,11 +205,12 @@ class Settings(BaseSettings):
     retry_jitter_range: float = Field(default=3.0)
 ```
 
-### 7. **Fix Private Attribute Access**
+### 7. **Fix Private Attribute Access** ✅ **COMPLETED**
 **Risk**: 🟡 Accessing `_semaphore._value` is brittle  
 **Files**: `invoice_pdf/core/rate_limit.py`
+**Status**: ✅ Implemented explicit token tracking to avoid private attribute access
 
-**Implementation** (1 hour):
+**Implementation** (1 hour): ✅ **COMPLETED**
 ```python
 class CapacityLimiter:
     def __init__(self, total_tokens: int):
