@@ -175,18 +175,20 @@ class ProcessingManifest:
         self._retry_operation(operation)
         logger.warning(f"Marked {file_path} with error: {error_message}")
 
-    def get_resume_queues(self, pdf_paths: list[str]) -> tuple[list[str], list[str]]:
+    def get_resume_queues(self, pdf_paths: list[str]) -> tuple[list[str], list[tuple[str, str]]]:
         """
         Get lists of files that need classification or extraction.
         
         Returns:
-            Tuple of (classify_list, extract_list)
+            Tuple of (classify_list, extract_list) where:
+            - classify_list: List of file paths needing classification
+            - extract_list: List of (file_path, doc_type) tuples needing extraction
         """
         # Handle empty pdf_paths list early to avoid SQL syntax error
         if not pdf_paths:
             return [], []
 
-        def operation() -> tuple[list[str], list[str]]:
+        def operation() -> tuple[list[str], list[tuple[str, str]]]:
             with self._lock:
                 if self._conn is None:
                     return [], []
@@ -227,7 +229,7 @@ class ProcessingManifest:
                         if classified and not extracted and not last_error:
                             # Only add to extraction queue if classification is valid
                             if classification in ["vendor_invoice", "employee_t&e"]:
-                                extract_list.append(pdf_path)
+                                extract_list.append((pdf_path, classification))
                             # If classification is 'irrelevant', mark as extracted (no extraction needed)
                             elif classification == "irrelevant":
                                 self.mark_extracted(pdf_path)
@@ -240,7 +242,7 @@ class ProcessingManifest:
 
                 return classify_list, extract_list
 
-        result: tuple[list[str], list[str]] = self._retry_operation(operation)
+        result: tuple[list[str], list[tuple[str, str]]] = self._retry_operation(operation)
         return result
 
     def get_summary(self) -> dict[str, Any]:
@@ -396,7 +398,7 @@ def mark_error(manifest: ProcessingManifest, file_path: str, error_message: str)
     manifest.mark_error(file_path, error_message)
 
 
-def get_resume_queues(manifest: ProcessingManifest, pdf_paths: list[str]) -> tuple[list[str], list[str]]:
+def get_resume_queues(manifest: ProcessingManifest, pdf_paths: list[str]) -> tuple[list[str], list[tuple[str, str]]]:
     """Get resume queues for classification and extraction."""
     return manifest.get_resume_queues(pdf_paths)
 

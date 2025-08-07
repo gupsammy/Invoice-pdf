@@ -42,6 +42,19 @@ ENHANCED_CLASSIFICATION_PROMPT_V2 = """You are a document classification expert.
    - Bank statements (informational only)
    - Provident Fund (PF) documents
    - Identity documents (passport, PAN, etc.)
+   - **Accounting and Bookkeeping Documents**: 
+     - Ledger account statements showing running balances and debit/credit entries
+     - Account confirmation statements and balance confirmations
+     - General ledger reports and accounting summaries
+     - Customer/vendor balance reconciliation statements
+     - Financial statements and trial balances
+     - Any document titled with "Ledger", "Account Statement", "Balance Confirmation", or similar accounting terminology
+     - Documents showing tabular debit/credit columns with running balance calculations (these are accounting records, not invoices)
+   - **EPFO and Statutory Receipts**: 
+     - EPFO (Employees' Provident Fund Organisation) challans and receipts
+     - Documents with "COMBINED CHALLAN OF A/C NO." headers
+     - Documents mentioning "EMPLOYEES' PROVIDENT FUND ORGANISATION"
+     - ESI, PF contribution receipts and government statutory payments
    - **Test files and placeholders**: Documents containing only titles like "Invoice-1", "Invoice-2" without actual business transaction data (no vendor details, amounts, dates, or substantive content)
    - Pure informational content without financial transactions
 
@@ -65,30 +78,16 @@ ENHANCED_CLASSIFICATION_PROMPT_V2 = """You are a document classification expert.
 2. **Key Identifier Recognition**: Look for specific indicators:
    - **Employee T&E Indicators**: "Travel & Expenses Statement", employee names, employee codes, travel dates, daily allowances, expense categories
    - **Vendor Invoice Indicators**: Company letterheads, "INVOICE", "BILL", vendor business names, GST/VAT numbers, invoice numbers, "To:" and "From:" business addresses, actual amounts, line items, tax details
-   - **Irrelevant Indicators**: Dashboard headers, policy statements, quotations without acceptance, **test/placeholder files with only titles**
-
-3. **CRITICAL: Placeholder/Test File Detection**: 
-   - **WARNING**: Documents containing ONLY titles like "Invoice-1", "Invoice-2", "Invoice-3" without any actual business content are `irrelevant`
-   - **Validation Required**: For documents with "Invoice" in title, verify presence of:
-     - Vendor/company details (names, addresses)
-     - Customer/recipient details  
-     - Actual amounts or pricing
-     - Invoice dates
-     - Line items or service descriptions
-     - Tax information or financial data
-   - **If missing above elements**: Classify as `irrelevant` regardless of "Invoice" title
-
-4. **Document Structure Priority**: 
+   - **Irrelevant Indicators**: Dashboard headers, policy statements, quotations without acceptance, **test/placeholder files with only titles**, **accounting documents with "Ledger", "Account Statement", "Balance Confirmation" in titles**, **documents with debit/credit columns and running balances**, **EPFO documents with "EMPLOYEES' PROVIDENT FUND ORGANISATION" or "COMBINED CHALLAN" headers**
+3. **Document Structure Priority**: 
    - **Title/Header Analysis**: What does the main title say?
    - **Content Flow**: Is this an employee submitting expenses or a business billing another business?
    - **Supporting vs Primary**: Are the vendor documents supporting an employee's expense claim?
-
-5. **Orientation Handling**: 
+4. **Orientation Handling**: 
    - **CRITICAL**: Pages may be rotated 90°, 180°, or 270° - use mental rotation to read content
    - **Try multiple reading angles** before making classification decisions
    - **Note orientation issues** but continue with classification
-
-6. **Confidence Assessment**: Rate classification confidence from 0.1 to 1.0 based on clarity of primary document identification
+5. **Confidence Assessment**: Rate classification confidence from 0.1 to 1.0 based on clarity of primary document identification
 
 ## OUTPUT FORMAT:
 

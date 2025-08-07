@@ -19,26 +19,37 @@ class StreamingCSVWriter:
     writes each row immediately, reducing memory usage for large datasets.
     """
 
-    def __init__(self, file_path: str, fieldnames: list[str]):
+    def __init__(self, file_path: str, fieldnames: list[str], append: bool = False):
         """
         Initialize the streaming CSV writer.
         
         Args:
             file_path: Path where to write the CSV file
             fieldnames: List of CSV column names
+            append: If True, append to existing file instead of overwriting
         """
         self.file_path = Path(file_path)
         self.fieldnames = fieldnames
         self.lock = asyncio.Lock()
+        self.append_mode = append
 
         # Ensure parent directory exists
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Create file and write header
-        self.file = open(self.file_path, "w", newline="", encoding="utf-8")
+        # Determine if we should write header
+        write_header = True
+        if append and self.file_path.exists():
+            # In append mode, only write header if file is empty
+            write_header = self.file_path.stat().st_size == 0
+
+        # Open file in appropriate mode
+        mode = "a" if append else "w"
+        self.file = open(self.file_path, mode, newline="", encoding="utf-8")
         self.writer = csv.DictWriter(self.file, fieldnames=self.fieldnames)
-        self.writer.writeheader()
-        self.file.flush()
+        
+        if write_header:
+            self.writer.writeheader()
+            self.file.flush()
 
         self._rows_written = 0
 

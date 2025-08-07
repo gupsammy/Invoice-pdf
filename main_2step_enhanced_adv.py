@@ -59,6 +59,8 @@ LOG_FILE = "invoice_extraction_2step_enhanced.log"
 # Processing Configuration
 _MAX_RETRIES = 3
 _RETRY_DELAY_BASE_SECONDS = 10
+# Maximum duration (in seconds) to wait for a single Gemini API call before timing out
+API_REQUEST_TIMEOUT = 60  # 5 minutes
 # Phase 1 Optimization: Single quota semaphore for API rate limiting
 QUOTA_LIMIT = 10  # Single-key AFC limit (combined for classification + extraction)
 PROCESSING_CHUNK_SIZE = int(os.getenv("PROCESSING_CHUNK_SIZE", "500"))
@@ -299,10 +301,14 @@ async def classify_document_async(
                 try:
                     logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Attempt {attempt + 1}/{_MAX_RETRIES} (Total pages: {total_pages})")
 
-                    response = await client.aio.models.generate_content(
-                        model=CLASSIFICATION_MODEL,
-                        contents=contents,
-                        config=config
+                    # Apply timeout to prevent indefinite hangs
+                    response = await asyncio.wait_for(
+                        client.aio.models.generate_content(
+                            model=CLASSIFICATION_MODEL,
+                            contents=contents,
+                            config=config
+                        ),
+                        timeout=API_REQUEST_TIMEOUT,
                     )
 
                     # Save response for debugging (controlled by DEBUG_RESPONSES flag)
@@ -333,17 +339,55 @@ async def classify_document_async(
                         json_str = resp_txt[json_start:json_end]
                         classification_data = json.loads(json_str)
                     except json.JSONDecodeError as json_error:
-                        # Try to fix common JSON malformations
+                        # Enhanced JSON repair with multiple strategies
                         logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - JSON malformed, attempting repair: {json_error!s}")
                         try:
                             import re
+                            import unicodedata
+                            
                             # json_str already cached above
-                            # Fix common issue: "text" (extra text) -> "text"
-                            fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
-                            classification_data = json.loads(fixed_json)
-                            logging.info(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair successful")
+                            repaired_json = json_str
+                            
+                            # Strategy 1: Clean Unicode and normalize characters
+                            repaired_json = unicodedata.normalize('NFKD', repaired_json)
+                            repaired_json = ''.join(c for c in repaired_json if ord(c) < 127 or c in '{}[]":,')
+                            
+                            # Strategy 1.5: Fix missing colons after keys (most common error)
+                            # Pattern: "key" value -> "key": value
+                            repaired_json = re.sub(r'"([^"]+)"\s+(["\d\[\{])', r'"\1": \2', repaired_json)
+                            
+                            # Strategy 1.6: Fix missing commas between object elements
+                            # Pattern: "value"\n    "key" -> "value",\n    "key"
+                            repaired_json = re.sub(r'("(?:[^"\\]|\\.)*")\s*\n\s*("(?:[^"\\]|\\.)*"\s*:)', r'\1,\n    \2', repaired_json)
+                            
+                            # Strategy 1.7: Fix missing commas between array elements  
+                            # Pattern: ]\n    [ -> ],\n    [
+                            repaired_json = re.sub(r']\s*\n\s*\[', '],\n    [', repaired_json)
+                            
+                            # Strategy 2: Fix array endings with junk characters
+                            # Pattern: ] junk ] -> ]
+                            repaired_json = re.sub(r']\s*[^,\s\]]*\s*]', ']', repaired_json)
+                            
+                            # Strategy 3: Fix quote endings with trailing text
+                            # Pattern: "text" junk" -> "text"
+                            repaired_json = re.sub(r'"([^"]*)"[^,"}\]]*"', r'"\1"', repaired_json)
+                            
+                            # Strategy 4: Original fix for parenthetical text
+                            repaired_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', repaired_json)
+                            
+                            # Strategy 5: Clean trailing junk after closing brace
+                            # Find the last valid } and truncate there
+                            last_brace = repaired_json.rfind('}')
+                            if last_brace != -1:
+                                repaired_json = repaired_json[:last_brace + 1]
+                            
+                            # Strategy 6: Fix missing commas in arrays
+                            repaired_json = re.sub(r'"\s*\n\s*"', '",\n    "', repaired_json)
+                            
+                            classification_data = json.loads(repaired_json)
+                            logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Enhanced JSON repair successful")
                         except json.JSONDecodeError:
-                            logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - JSON repair failed")
+                            logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - Enhanced JSON repair failed")
                             save_classification_response()  # Save on failure
                             raise json_error
 
@@ -486,10 +530,14 @@ async def extract_document_data_async(
                 try:
                     logging.info(f"[EXTRACT] {pdf_path_obj.name} - Attempt {attempt + 1}/{_MAX_RETRIES} ({document_type}, {total_pages} pages)")
 
-                    response = await client.aio.models.generate_content(
-                        model=EXTRACTION_MODEL,
-                        contents=contents,
-                        config=config
+                    # Apply timeout to prevent indefinite hangs
+                    response = await asyncio.wait_for(
+                        client.aio.models.generate_content(
+                            model=EXTRACTION_MODEL,
+                            contents=contents,
+                            config=config
+                        ),
+                        timeout=API_REQUEST_TIMEOUT,
                     )
 
                     # Save response for debugging in appropriate subfolder
@@ -521,17 +569,55 @@ async def extract_document_data_async(
                         json_str = resp_txt[json_start:json_end]
                         extraction_data = json.loads(json_str)
                     except json.JSONDecodeError as json_error:
-                        # Try to fix common JSON malformations
+                        # Enhanced JSON repair with multiple strategies
                         logging.warning(f"[EXTRACT] {pdf_path_obj.name} - JSON malformed, attempting repair: {json_error!s}")
                         try:
                             import re
+                            import unicodedata
+                            
                             # json_str already cached above
-                            # Fix common issue: "text" (extra text) -> "text"
-                            fixed_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', json_str)
-                            extraction_data = json.loads(fixed_json)
-                            logging.info(f"[EXTRACT] {pdf_path_obj.name} - JSON repair successful")
+                            repaired_json = json_str
+                            
+                            # Strategy 1: Clean Unicode and normalize characters
+                            repaired_json = unicodedata.normalize('NFKD', repaired_json)
+                            repaired_json = ''.join(c for c in repaired_json if ord(c) < 127 or c in '{}[]":,')
+                            
+                            # Strategy 1.5: Fix missing colons after keys (most common error)
+                            # Pattern: "key" value -> "key": value
+                            repaired_json = re.sub(r'"([^"]+)"\s+(["\d\[\{])', r'"\1": \2', repaired_json)
+                            
+                            # Strategy 1.6: Fix missing commas between object elements
+                            # Pattern: "value"\n    "key" -> "value",\n    "key"
+                            repaired_json = re.sub(r'("(?:[^"\\]|\\.)*")\s*\n\s*("(?:[^"\\]|\\.)*"\s*:)', r'\1,\n    \2', repaired_json)
+                            
+                            # Strategy 1.7: Fix missing commas between array elements  
+                            # Pattern: ]\n    [ -> ],\n    [
+                            repaired_json = re.sub(r']\s*\n\s*\[', '],\n    [', repaired_json)
+                            
+                            # Strategy 2: Fix array endings with junk characters
+                            # Pattern: ] junk ] -> ]
+                            repaired_json = re.sub(r']\s*[^,\s\]]*\s*]', ']', repaired_json)
+                            
+                            # Strategy 3: Fix quote endings with trailing text
+                            # Pattern: "text" junk" -> "text"
+                            repaired_json = re.sub(r'"([^"]*)"[^,"}\]]*"', r'"\1"', repaired_json)
+                            
+                            # Strategy 4: Original fix for parenthetical text
+                            repaired_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', repaired_json)
+                            
+                            # Strategy 5: Clean trailing junk after closing brace
+                            # Find the last valid } and truncate there
+                            last_brace = repaired_json.rfind('}')
+                            if last_brace != -1:
+                                repaired_json = repaired_json[:last_brace + 1]
+                            
+                            # Strategy 6: Fix missing commas in arrays
+                            repaired_json = re.sub(r'"\s*\n\s*"', '",\n    "', repaired_json)
+                            
+                            extraction_data = json.loads(repaired_json)
+                            logging.info(f"[EXTRACT] {pdf_path_obj.name} - Enhanced JSON repair successful")
                         except json.JSONDecodeError:
-                            logging.exception(f"[EXTRACT] {pdf_path_obj.name} - JSON repair failed")
+                            logging.exception(f"[EXTRACT] {pdf_path_obj.name} - Enhanced JSON repair failed")
                             save_extraction_response()  # Save on failure
                             raise json_error
 
@@ -684,6 +770,14 @@ async def process_files_batch(
                     if stage == "classification" and result.get("preprocessing_failure", False):
                         successful_results.append(result)
                         pbar.set_postfix_str(f"🔧 {filename} (preprocessing error)")
+                        
+                        # CRITICAL: Mark preprocessing failures as completed in manifest to avoid retries
+                        if processing_manifest:
+                            processing_manifest.mark_classified(
+                                result["file_path"], 
+                                result["classification"],  # "processing_failed"
+                                "processing_failed"
+                            )
                     else:
                         successful_results.append(result)
                         if stage == "classification":
@@ -2209,6 +2303,86 @@ async def process_with_pipeline_overlap(
 
     return classification_results, extraction_results, failed_classification, failed_extraction, relevant_documents
 
+
+async def process_resume_chunk_with_streaming_csv(
+    classify_chunk: list[str],
+    extract_chunk: list[tuple[str, str]],  # (file_path, doc_type)
+    client: "genai.Client",
+    quota_semaphore: asyncio.Semaphore,
+    json_responses_folder: str,
+    classification_writer: StreamingCSVWriter,
+    vendor_writer: StreamingCSVWriter,
+    employee_writer: StreamingCSVWriter,
+    chunk_number: int,
+    total_chunks: int,
+    chunk_type: str  # "classification" or "extraction"
+) -> tuple[int, int, int, int]:
+    """
+    Process a resume mode chunk with mixed classification and extraction workloads.
+    Reuses existing chunked processing infrastructure for memory efficiency and progress tracking.
+    
+    Returns:
+        Tuple of (classified_count, extracted_count, failed_classify_count, failed_extract_count)
+    """
+    # Check for shutdown request before processing chunk
+    global shutdown_event
+    if shutdown_event and shutdown_event.is_set():
+        logging.info(f"🛑 Shutdown requested, skipping chunk {chunk_number}")
+        return 0, 0, 0, 0
+
+    logging.info(f"📦 Resume chunk {chunk_number}/{total_chunks} ({len(classify_chunk + extract_chunk)} files) - {chunk_type}")
+
+    classification_results = []
+    extraction_results = []
+    failed_classification = []
+    failed_extraction = []
+
+    # Handle classification work
+    if classify_chunk:
+        logging.info(f"🏷️  Processing {len(classify_chunk)} files needing classification...")
+        classify_results, classify_failed = await process_with_retries(
+            classify_chunk, client, quota_semaphore, json_responses_folder,
+            stage="classification", max_passes=3
+        )
+        
+        classification_results.extend(classify_results)
+        failed_classification.extend(classify_failed)
+        
+        # Stream classification results immediately
+        classification_config = get_classification_csv_config()
+        row_mapper = classification_config["row_mapper"]
+        for result in classify_results:
+            mapped_result = row_mapper(result)
+            await classification_writer.write_row(mapped_result)
+        
+        logging.info(f"✅ Chunk {chunk_number}: {len(classify_results)} classifications completed, {len(classify_failed)} failed")
+
+    # Handle extraction work
+    if extract_chunk:
+        logging.info(f"💎 Processing {len(extract_chunk)} files needing extraction...")
+        extract_results, extract_failed = await process_with_retries(
+            extract_chunk, client, quota_semaphore, json_responses_folder,
+            stage="extraction", max_passes=3
+        )
+        
+        extraction_results.extend(extract_results)
+        failed_extraction.extend(extract_failed)
+        
+        # Stream extraction results immediately
+        for result in extract_results:
+            doc_type = result.get("document_type_processed", "")
+            if doc_type == "vendor_invoice":
+                for row in build_vendor_rows(result):
+                    await vendor_writer.write_row(row)
+            elif doc_type == "employee_t&e":
+                for row in build_employee_rows(result):
+                    await employee_writer.write_row(row)
+        
+        logging.info(f"✅ Chunk {chunk_number}: {len(extract_results)} extractions completed, {len(extract_failed)} failed")
+
+    return len(classification_results), len(extraction_results), len(failed_classification), len(failed_extraction)
+
+
 async def main(input_folder=None, output_folder=None, logs_folder=None, json_responses_folder=None, resume_extraction=False, resume=False, no_tui=False):
     """
     Enhanced main 2-step processing function with improved accuracy and organization.
@@ -2289,6 +2463,109 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         failed_classification = []
         failed_extraction = []
 
+        # ===========================
+        # CHUNKED RESUME MODE: REUSE EXISTING CHUNKED INFRASTRUCTURE
+        # ===========================
+        logging.info(f"🔄 Processing resume queues with chunked pipeline: {len(classify_list)} classifications, {len(extract_list)} extractions")
+        
+        # Calculate chunks for both workloads
+        chunk_size = PROCESSING_CHUNK_SIZE
+        classify_chunks = list(chunker(classify_list, chunk_size)) if classify_list else []
+        extract_chunks = list(chunker(extract_list, chunk_size)) if extract_list else []
+        
+        # Determine total chunks and processing strategy
+        total_chunks = len(classify_chunks) + len(extract_chunks)
+        
+        logging.info(f"📦 Resume mode chunked processing: {len(classify_chunks)} classification chunks, {len(extract_chunks)} extraction chunks")
+        
+        # Initialize streaming CSV writers for resume mode
+        classification_csv_path = os.path.join(output_folder, CLASSIFICATION_CSV_FILE)
+        vendor_csv_path = os.path.join(output_folder, VENDOR_EXTRACTION_CSV_FILE)
+        employee_csv_path = os.path.join(output_folder, EMPLOYEE_EXTRACTION_CSV_FILE)
+
+        classification_writer = StreamingCSVWriter(classification_csv_path, get_classification_csv_config()["fieldnames"], append=True)
+        vendor_writer = StreamingCSVWriter(vendor_csv_path, get_vendor_extraction_csv_config()["fieldnames"], append=True)
+        employee_writer = StreamingCSVWriter(employee_csv_path, get_employee_extraction_csv_config()["fieldnames"], append=True)
+
+        # Track totals for final reporting
+        total_classified = total_extracted = total_failed_classify = total_failed_extract = 0
+        
+        try:
+            chunk_counter = 0
+            
+            # Process classification chunks
+            for chunk_num, classify_chunk in enumerate(classify_chunks, 1):
+                chunk_counter += 1
+                
+                # Check for shutdown request
+                if shutdown_event and shutdown_event.is_set():
+                    logging.info(f"🛑 Shutdown requested, stopping after chunk {chunk_counter-1}/{total_chunks}")
+                    break
+                
+                classified, extracted, failed_classify, failed_extract = await process_resume_chunk_with_streaming_csv(
+                    classify_chunk, [], client, quota_semaphore, json_responses_folder,
+                    classification_writer, vendor_writer, employee_writer,
+                    chunk_counter, total_chunks, "classification"
+                )
+                
+                total_classified += classified
+                total_extracted += extracted  # Should be 0 for classification chunks
+                total_failed_classify += failed_classify
+                total_failed_extract += failed_extract
+                
+                # Garbage collection between chunks
+                if chunk_counter < total_chunks:
+                    gc.collect()
+                    logging.info(f"🗑️  Memory cleanup after chunk {chunk_counter}/{total_chunks}")
+
+            # Process extraction chunks  
+            for chunk_num, extract_chunk in enumerate(extract_chunks, 1):
+                chunk_counter += 1
+                
+                # Check for shutdown request
+                if shutdown_event and shutdown_event.is_set():
+                    logging.info(f"🛑 Shutdown requested, stopping after chunk {chunk_counter-1}/{total_chunks}")
+                    break
+                
+                classified, extracted, failed_classify, failed_extract = await process_resume_chunk_with_streaming_csv(
+                    [], extract_chunk, client, quota_semaphore, json_responses_folder,
+                    classification_writer, vendor_writer, employee_writer,
+                    chunk_counter, total_chunks, "extraction"
+                )
+                
+                total_classified += classified  # Should be 0 for extraction chunks
+                total_extracted += extracted
+                total_failed_classify += failed_classify
+                total_failed_extract += failed_extract
+                
+                # Garbage collection between chunks
+                if chunk_counter < total_chunks:
+                    gc.collect()
+                    logging.info(f"🗑️  Memory cleanup after chunk {chunk_counter}/{total_chunks}")
+
+        finally:
+            # Close streaming writers
+            classification_writer.close()
+            vendor_writer.close()
+            employee_writer.close()
+
+        logging.info(f"📊 Chunked resume processing complete: {total_classified} classified, {total_extracted} extracted")
+
+        # Set statistics for final reporting (reuse existing variables)
+        total_files = len(all_pdf_files)
+        classified_files = total_classified
+        extracted_files = total_extracted
+        vendor_extracted = vendor_writer.rows_written
+        employee_extracted = employee_writer.rows_written
+        relevant_files = len(extract_list) + extracted_files
+        
+        # Set empty lists for compatibility with final reporting
+        classification_results = []
+        extraction_results = []
+        failed_classification = []
+        failed_extraction = []
+        relevant_documents = extract_list if extract_list else []
+
     elif resume_extraction:
         # ===========================
         # RESUME MODE: SKIP CLASSIFICATION, USE EXISTING RESULTS
@@ -2307,7 +2584,7 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
         # Skip to extraction logic
         # TODO: Handle extraction with manifest
 
-    if not resume or not processing_manifest:
+    if not resume and not resume_extraction:
         # ===========================
         # PHASE 6: CHUNKED PROCESSING WITH STREAMING CSV WRITERS
         # ===========================
@@ -2634,6 +2911,29 @@ async def main(input_folder=None, output_folder=None, logs_folder=None, json_res
     logging.info(f"   - Employee Extraction: {EMPLOYEE_EXTRACTION_CSV_FILE}")
     logging.info(f"   - Excel Report: {input_folder_name}_data.xlsx")
     logging.info(f"   - Summary Report: {input_folder_name}_summary.md")
+
+    # ===========================
+    # SHUTDOWN GEMINI CLIENT TO PREVENT HANGS
+    # ===========================
+    # If the underlying HTTP client (aiohttp/httpx) keeps background tasks alive, Python may
+    # remain running with 0 % CPU after all work appears finished.  Explicitly closing the
+    # Gemini client (and therefore its underlying session/connector) ensures the event loop
+    # can exit cleanly.
+    try:
+        # Prefer async close() method if available (library ≥ 0.4.0) ---------------------------------
+        close_coro = getattr(client, "close_async", None)
+        if callable(close_coro):
+            await close_coro()
+        else:
+            # Fall back to synchronous close() or awaitable close() depending on version -----------
+            close_fn = getattr(client, "close", None)
+            if callable(close_fn):
+                maybe_coro = close_fn()
+                if asyncio.iscoroutine(maybe_coro):
+                    await maybe_coro
+        logging.debug("🔒 Gemini client connection closed")
+    except Exception as e:
+        logging.debug(f"Error closing Gemini client: {e}")
 
     # ===========================
     # CLEANUP TUI AND MANIFEST
