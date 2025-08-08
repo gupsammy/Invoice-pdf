@@ -18,3 +18,4 @@ _pycache_/
 *.egg-info/
 .coverage
 .mypy_cache/
+*.out

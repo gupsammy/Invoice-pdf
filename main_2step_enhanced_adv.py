@@ -63,9 +63,6 @@ _RETRY_DELAY_BASE_SECONDS = 10
 API_REQUEST_TIMEOUT = 60  # 5 minutes
 # Phase 1 Optimization: Single quota semaphore for API rate limiting
 QUOTA_LIMIT = 10  # Single-key AFC limit (combined for classification + extraction)
-PROCESSING_CHUNK_SIZE = int(os.getenv("PROCESSING_CHUNK_SIZE", "500"))
-# Phase 2 Optimization: Response dump control
-SAVE_RESPONSES = os.getenv("DEBUG_RESPONSES", "0") == "1"
 # Phase 4 Optimization: PDF file descriptor guard
 PDF_FD_SEMAPHORE_LIMIT = 50
 
@@ -98,6 +95,11 @@ def setup_logging(logs_folder):
 
 # Load environment variables
 load_dotenv()
+
+# Phase 2 Optimization: Response dump control (must be after load_dotenv)
+PROCESSING_CHUNK_SIZE = int(os.getenv("PROCESSING_CHUNK_SIZE", "500"))
+SAVE_RESPONSES = os.getenv("DEBUG_RESPONSES", "0") == "1"
+
 API_KEY = os.getenv("GEMINI_API_KEY")
 if not API_KEY:
     raise ValueError("GEMINI_API_KEY not found in environment variables. Please set it in a .env file.")
@@ -272,11 +274,23 @@ async def classify_document_async(
             if total_pages == 0:
                 error_msg = "Unable to read PDF or empty PDF"
                 logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
-                return create_preprocessing_failure_result(pdf_path, error_msg)
+                result = create_preprocessing_failure_result(pdf_path, error_msg)
+                
+                # Mark preprocessing failures as classified in manifest to prevent retries
+                if processing_manifest:
+                    processing_manifest.mark_classified(pdf_path, "processing_failed", "processing_failed")
+                
+                return result
         except Exception as e:
             error_msg = f"Failed to get PDF page count: {e!s}"
             logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
-            return create_preprocessing_failure_result(pdf_path, error_msg)
+            result = create_preprocessing_failure_result(pdf_path, error_msg)
+            
+            # Mark preprocessing failures as classified in manifest to prevent retries
+            if processing_manifest:
+                processing_manifest.mark_classified(pdf_path, "processing_failed", "processing_failed")
+            
+            return result
 
         # Extract first 7 pages - catch preprocessing errors (Phase 4: thread-off PDF slicing)
         try:
@@ -284,7 +298,13 @@ async def classify_document_async(
         except Exception as e:
             error_msg = f"Failed to extract PDF pages: {e!s}"
             logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - Preprocessing error: {error_msg}")
-            return create_preprocessing_failure_result(pdf_path, error_msg)
+            result = create_preprocessing_failure_result(pdf_path, error_msg)
+            
+            # Mark preprocessing failures as classified in manifest to prevent retries
+            if processing_manifest:
+                processing_manifest.mark_classified(pdf_path, "processing_failed", "processing_failed")
+            
+            return result
 
         contents = [
             types.Part.from_bytes(
@@ -417,6 +437,10 @@ async def classify_document_async(
                 except json.JSONDecodeError as jde:
                     error_msg = f"JSON decode failed: {jde!s}"
                     logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Save response for debugging when DEBUG_RESPONSES=1 or always on failure
+                    if SAVE_RESPONSES:
+                        save_classification_response()
 
                     # Record error in manifest (when resume mode is active)
                     if processing_manifest:
@@ -433,7 +457,14 @@ async def classify_document_async(
                         await asyncio.sleep(delay)
                         continue
                     error_msg = f"Exhausted retries: {str(exc)[:150]}"
-                    logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Check if this is an authentication error vs other permanent errors
+                    if "reauthentication is needed" in str(exc).lower() or "authentication" in str(exc).lower():
+                        # Auth errors: don't mark as classified (allow retry after reauth)
+                        logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - Authentication error, NOT marking as classified: {error_msg}")
+                    else:
+                        # Other permanent errors: don't mark as classified (current safe behavior)
+                        logging.error(f"[CLASSIFY] {pdf_path_obj.name} - Permanent error, NOT marking as classified: {error_msg}")
 
                     # Record error in manifest (when resume mode is active)
                     if processing_manifest:
@@ -643,6 +674,10 @@ async def extract_document_data_async(
                 except json.JSONDecodeError as jde:
                     error_msg = f"JSON decode failed: {jde!s}"
                     logging.exception(f"[EXTRACT] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Save response for debugging when DEBUG_RESPONSES=1 or always on failure
+                    if SAVE_RESPONSES:
+                        save_extraction_response()
 
                     # Record error in manifest (when resume mode is active)
                     if processing_manifest:
@@ -659,7 +694,14 @@ async def extract_document_data_async(
                         await asyncio.sleep(delay)
                         continue
                     error_msg = f"Exhausted retries: {str(exc)[:150]}"
-                    logging.exception(f"[EXTRACT] {pdf_path_obj.name} - {error_msg}")
+                    
+                    # Check if this is an authentication error vs other permanent errors
+                    if "reauthentication is needed" in str(exc).lower():
+                        # Auth errors: don't mark as extracted (allow retry after reauth)
+                        logging.warning(f"[EXTRACT] {pdf_path_obj.name} - Authentication error, NOT marking as extracted: {error_msg}")
+                    else:
+                        # Other permanent errors: don't mark as extracted (current safe behavior)
+                        logging.error(f"[EXTRACT] {pdf_path_obj.name} - Extraction error, NOT marking as extracted: {error_msg}")
 
                     # Record error in manifest (when resume mode is active)
                     if processing_manifest:
