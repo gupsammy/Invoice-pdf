@@ -219,11 +219,17 @@ class ProcessingManifest:
                             classify_list.append(pdf_path)
                             continue
 
-                        # Skip files with extraction errors that were classified successfully
+                        # Handle files with extraction errors that were classified successfully
                         if last_error and classified and not extracted:
-                            # Don't add to any queue - manual intervention may be needed
-                            # Could add a separate "error" queue in the future
-                            continue
+                            # Check if this is a retryable error (auth issues or exhausted retries)
+                            if "Exhausted retries:" in last_error or "reauthentication" in last_error.lower():
+                                # Retryable error - add to extraction queue if classification is valid
+                                if classification in ["vendor_invoice", "employee_t&e"]:
+                                    extract_list.append((pdf_path, classification))
+                                continue
+                            else:
+                                # Non-retryable error - skip and may need manual intervention
+                                continue
 
                         # Need extraction if classified but not extracted (and no errors)
                         if classified and not extracted and not last_error:

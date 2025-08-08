@@ -333,7 +333,7 @@ async def classify_document_async(
                     # Record classification in manifest (when resume mode is active)
                     if processing_manifest:
                         classification = classification_data.get("classification", "")
-                        doc_type = classification_data.get("document_type", "")
+                        doc_type = classification_data.get("primary_document_type", "")
                         processing_manifest.mark_classified(pdf_path, classification, doc_type)
 
                     return classification_data
