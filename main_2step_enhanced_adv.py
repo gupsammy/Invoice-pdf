@@ -38,23 +38,25 @@ from utilities.streaming_csv import StreamingCSVWriter
 # Import TUI for interactive monitoring
 from utilities.tui import run_tui_monitor
 
-# ===========================
-# ENHANCED CONFIGURATION CONSTANTS
-# ===========================
+# Import PDF utilities
+from utilities.pdf_utils import get_pdf_page_count, extract_first_n_pages_pdf
 
-# Folder Configuration
-INPUT_FOLDER = "input"
-OUTPUT_FOLDER = "output"
-LOGS_FOLDER = "logs"
-JSON_RESPONSES_FOLDER = "json_responses"
+# Import JSON utilities
+from utilities.json_utils import try_parse_or_repair_json
 
-# File Configuration
-CLASSIFICATION_CSV_FILE = "classification_results.csv"
-VENDOR_EXTRACTION_CSV_FILE = "vendor_extraction_results.csv"
-EMPLOYEE_EXTRACTION_CSV_FILE = "employee_extraction_results.csv"
-COMBINED_CSV_FILE = "combined_enhanced_results.csv"
-FAILED_CSV_FILE = "failed_enhanced_files.csv"
-LOG_FILE = "invoice_extraction_2step_enhanced.log"
+# Import shared configuration constants
+from config_adv import (
+    INPUT_FOLDER, OUTPUT_FOLDER, LOGS_FOLDER, JSON_RESPONSES_FOLDER,
+    CLASSIFICATION_CSV_FILE, VENDOR_EXTRACTION_CSV_FILE, EMPLOYEE_EXTRACTION_CSV_FILE,
+    COMBINED_CSV_FILE, FAILED_CSV_FILE, LOG_FILE,
+    CLASSIFICATION_MODEL, EXTRACTION_MODEL,
+    MAX_CLASSIFICATION_PAGES, MAX_EXTRACTION_PAGES,
+    MAX_CONCURRENT_CLASSIFY, MAX_CONCURRENT_EXTRACT,
+)
+
+# ===========================
+# RUNTIME CONFIGURATION (STAYS IN MAIN)
+# ===========================
 
 # Processing Configuration
 _MAX_RETRIES = 3
@@ -65,16 +67,6 @@ API_REQUEST_TIMEOUT = 60  # 5 minutes
 QUOTA_LIMIT = 10  # Single-key AFC limit (combined for classification + extraction)
 # Phase 4 Optimization: PDF file descriptor guard
 PDF_FD_SEMAPHORE_LIMIT = 50
-
-# Enhanced 2-Step Configuration
-MAX_CLASSIFICATION_PAGES = 7  # Increased from 5 to 7 pages
-MAX_EXTRACTION_PAGES = 20     # Only process files with ≤20 pages for extraction (split if >20)
-CLASSIFICATION_MODEL = "gemini-2.5-flash"
-EXTRACTION_MODEL = "gemini-2.5-pro"
-
-# Concurrency Configuration
-MAX_CONCURRENT_CLASSIFY = 5   # Max concurrent classification tasks
-MAX_CONCURRENT_EXTRACT = 3    # Max concurrent extraction tasks
 
 def setup_logging(logs_folder):
     """Set up logging with the specified logs folder."""
@@ -151,52 +143,6 @@ async def safe_extract_first_n_pages_pdf(pdf_path: str, max_pages: int) -> bytes
     async with pdf_fd_semaphore:
         return await asyncio.to_thread(extract_first_n_pages_pdf, pdf_path, max_pages)
 
-def get_pdf_page_count(pdf_path: str) -> int:
-    """Get the total number of pages in a PDF file."""
-    try:
-        doc = fitz.open(pdf_path)
-        page_count = len(doc)
-        doc.close()
-        return page_count
-    except Exception as e:
-        logging.exception(f"Error getting page count for {pdf_path}: {e!s}")
-        return 0
-
-def extract_first_n_pages_pdf(pdf_path: str, max_pages: int = MAX_CLASSIFICATION_PAGES) -> bytes:
-    """
-    Extract the first N pages from a PDF and return as bytes using optimized page slicing.
-    
-    Args:
-        pdf_path: Path to the PDF file
-        max_pages: Maximum number of pages to extract (default: 7)
-        
-    Returns:
-        PDF bytes containing only the first N pages
-    """
-    try:
-        # Open the source PDF
-        source_doc = fitz.open(pdf_path)
-
-        # Determine pages to extract
-        pages_to_copy = min(len(source_doc), max_pages)
-
-        if pages_to_copy == len(source_doc):
-            # If we need all pages, just return the original document as bytes
-            pdf_bytes = source_doc.tobytes()
-            source_doc.close()
-            return pdf_bytes
-
-        # Create a new document and copy pages
-        new_doc = fitz.open()
-        new_doc.insert_pdf(source_doc, from_page=0, to_page=pages_to_copy-1)
-        pdf_bytes = new_doc.tobytes()
-        new_doc.close()
-        source_doc.close()
-        return pdf_bytes
-
-    except Exception as e:
-        logging.exception(f"Error extracting first {max_pages} pages from {pdf_path}: {e!s}")
-        raise
 
 def create_preprocessing_failure_result(pdf_path: str, error_message: str) -> dict[str, Any]:
     """
@@ -354,62 +300,20 @@ async def classify_document_async(
                         save_classification_response()  # Save on failure
                         return None
 
+                    # Phase 8: Cache JSON string once for both parsing attempts
+                    json_str = resp_txt[json_start:json_end]
                     try:
-                        # Phase 8: Cache JSON string once for both parsing attempts
-                        json_str = resp_txt[json_start:json_end]
-                        classification_data = json.loads(json_str)
-                    except json.JSONDecodeError as json_error:
-                        # Enhanced JSON repair with multiple strategies
-                        logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - JSON malformed, attempting repair: {json_error!s}")
+                        classification_data = try_parse_or_repair_json(json_str)
+                        # Log success if repair was needed (would have thrown first time)
                         try:
-                            import re
-                            import unicodedata
-                            
-                            # json_str already cached above
-                            repaired_json = json_str
-                            
-                            # Strategy 1: Clean Unicode and normalize characters
-                            repaired_json = unicodedata.normalize('NFKD', repaired_json)
-                            repaired_json = ''.join(c for c in repaired_json if ord(c) < 127 or c in '{}[]":,')
-                            
-                            # Strategy 1.5: Fix missing colons after keys (most common error)
-                            # Pattern: "key" value -> "key": value
-                            repaired_json = re.sub(r'"([^"]+)"\s+(["\d\[\{])', r'"\1": \2', repaired_json)
-                            
-                            # Strategy 1.6: Fix missing commas between object elements
-                            # Pattern: "value"\n    "key" -> "value",\n    "key"
-                            repaired_json = re.sub(r'("(?:[^"\\]|\\.)*")\s*\n\s*("(?:[^"\\]|\\.)*"\s*:)', r'\1,\n    \2', repaired_json)
-                            
-                            # Strategy 1.7: Fix missing commas between array elements  
-                            # Pattern: ]\n    [ -> ],\n    [
-                            repaired_json = re.sub(r']\s*\n\s*\[', '],\n    [', repaired_json)
-                            
-                            # Strategy 2: Fix array endings with junk characters
-                            # Pattern: ] junk ] -> ]
-                            repaired_json = re.sub(r']\s*[^,\s\]]*\s*]', ']', repaired_json)
-                            
-                            # Strategy 3: Fix quote endings with trailing text
-                            # Pattern: "text" junk" -> "text"
-                            repaired_json = re.sub(r'"([^"]*)"[^,"}\]]*"', r'"\1"', repaired_json)
-                            
-                            # Strategy 4: Original fix for parenthetical text
-                            repaired_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', repaired_json)
-                            
-                            # Strategy 5: Clean trailing junk after closing brace
-                            # Find the last valid } and truncate there
-                            last_brace = repaired_json.rfind('}')
-                            if last_brace != -1:
-                                repaired_json = repaired_json[:last_brace + 1]
-                            
-                            # Strategy 6: Fix missing commas in arrays
-                            repaired_json = re.sub(r'"\s*\n\s*"', '",\n    "', repaired_json)
-                            
-                            classification_data = json.loads(repaired_json)
-                            logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Enhanced JSON repair successful")
+                            json.loads(json_str)
                         except json.JSONDecodeError:
-                            logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - Enhanced JSON repair failed")
-                            save_classification_response()  # Save on failure
-                            raise json_error
+                            logging.info(f"[CLASSIFY] {pdf_path_obj.name} - Enhanced JSON repair successful")
+                    except json.JSONDecodeError as json_error:
+                        logging.warning(f"[CLASSIFY] {pdf_path_obj.name} - JSON malformed, repair failed: {json_error!s}")
+                        logging.exception(f"[CLASSIFY] {pdf_path_obj.name} - Enhanced JSON repair failed")
+                        save_classification_response()  # Save on failure
+                        raise json_error
 
                     # Add metadata
                     classification_data["file_name"] = pdf_path_obj.name
@@ -595,62 +499,20 @@ async def extract_document_data_async(
                         save_extraction_response()  # Save on failure
                         return None
 
+                    # Phase 8: Cache JSON string once for both parsing attempts
+                    json_str = resp_txt[json_start:json_end]
                     try:
-                        # Phase 8: Cache JSON string once for both parsing attempts
-                        json_str = resp_txt[json_start:json_end]
-                        extraction_data = json.loads(json_str)
-                    except json.JSONDecodeError as json_error:
-                        # Enhanced JSON repair with multiple strategies
-                        logging.warning(f"[EXTRACT] {pdf_path_obj.name} - JSON malformed, attempting repair: {json_error!s}")
+                        extraction_data = try_parse_or_repair_json(json_str)
+                        # Log success if repair was needed (would have thrown first time)
                         try:
-                            import re
-                            import unicodedata
-                            
-                            # json_str already cached above
-                            repaired_json = json_str
-                            
-                            # Strategy 1: Clean Unicode and normalize characters
-                            repaired_json = unicodedata.normalize('NFKD', repaired_json)
-                            repaired_json = ''.join(c for c in repaired_json if ord(c) < 127 or c in '{}[]":,')
-                            
-                            # Strategy 1.5: Fix missing colons after keys (most common error)
-                            # Pattern: "key" value -> "key": value
-                            repaired_json = re.sub(r'"([^"]+)"\s+(["\d\[\{])', r'"\1": \2', repaired_json)
-                            
-                            # Strategy 1.6: Fix missing commas between object elements
-                            # Pattern: "value"\n    "key" -> "value",\n    "key"
-                            repaired_json = re.sub(r'("(?:[^"\\]|\\.)*")\s*\n\s*("(?:[^"\\]|\\.)*"\s*:)', r'\1,\n    \2', repaired_json)
-                            
-                            # Strategy 1.7: Fix missing commas between array elements  
-                            # Pattern: ]\n    [ -> ],\n    [
-                            repaired_json = re.sub(r']\s*\n\s*\[', '],\n    [', repaired_json)
-                            
-                            # Strategy 2: Fix array endings with junk characters
-                            # Pattern: ] junk ] -> ]
-                            repaired_json = re.sub(r']\s*[^,\s\]]*\s*]', ']', repaired_json)
-                            
-                            # Strategy 3: Fix quote endings with trailing text
-                            # Pattern: "text" junk" -> "text"
-                            repaired_json = re.sub(r'"([^"]*)"[^,"}\]]*"', r'"\1"', repaired_json)
-                            
-                            # Strategy 4: Original fix for parenthetical text
-                            repaired_json = re.sub(r'"([^"]*)" \([^)]*\)', r'"\1"', repaired_json)
-                            
-                            # Strategy 5: Clean trailing junk after closing brace
-                            # Find the last valid } and truncate there
-                            last_brace = repaired_json.rfind('}')
-                            if last_brace != -1:
-                                repaired_json = repaired_json[:last_brace + 1]
-                            
-                            # Strategy 6: Fix missing commas in arrays
-                            repaired_json = re.sub(r'"\s*\n\s*"', '",\n    "', repaired_json)
-                            
-                            extraction_data = json.loads(repaired_json)
-                            logging.info(f"[EXTRACT] {pdf_path_obj.name} - Enhanced JSON repair successful")
+                            json.loads(json_str)
                         except json.JSONDecodeError:
-                            logging.exception(f"[EXTRACT] {pdf_path_obj.name} - Enhanced JSON repair failed")
-                            save_extraction_response()  # Save on failure
-                            raise json_error
+                            logging.info(f"[EXTRACT] {pdf_path_obj.name} - Enhanced JSON repair successful")
+                    except json.JSONDecodeError as json_error:
+                        logging.warning(f"[EXTRACT] {pdf_path_obj.name} - JSON malformed, repair failed: {json_error!s}")
+                        logging.exception(f"[EXTRACT] {pdf_path_obj.name} - Enhanced JSON repair failed")
+                        save_extraction_response()  # Save on failure
+                        raise json_error
 
                     # Add metadata
                     extraction_data["file_name"] = pdf_path_obj.name
